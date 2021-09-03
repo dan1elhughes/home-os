@@ -1,0 +1,130 @@
+---
+- name: Enable cgroup container features
+  become: true
+  replace:
+    path: /boot/cmdline.txt
+    regexp: '^([\w](?!.*\b{{ item }}\b).*)$'
+    replace: '\1 {{ item }}'
+  with_items:
+    - "cgroup_memory=1"
+    - "cgroup_enable=memory"
+  notify: reboot
+
+- name: Get Tailscale IP
+  command: tailscale ip --4
+  register: tailscale_ip
+  changed_when: false
+
+- name: Store master hostname
+  set_fact:
+    master_hostname: "{{ primary_master }}.local"
+
+- name: Store master Tailscale IP
+  set_fact:
+    master_ip: "{{ hostvars[master_hostname].tailscale_ip.stdout }}"
+
+- name: Store local Tailscale IP
+  set_fact:
+    tailscale_ip: "{{ tailscale_ip.stdout }}"
+
+- name: Install k3s on primary master
+  when: inventory_hostname in groups['k3s_primary']
+  shell: "curl -sfL https://get.k3s.io | sh -"
+  args:
+    warn: false
+    creates: "/usr/local/bin/k3s"
+  environment:
+    INSTALL_K3S_EXEC: >-
+      --tls-san {{ master_ip }}
+      --advertise-address {{ tailscale_ip }}
+      --flannel-iface tailscale0
+      --node-ip {{ tailscale_ip }}
+      --node-external-ip {{ tailscale_ip }}
+      --disable metrics-server
+      --disable traefik
+      --disable servicelb
+
+# --cluster-init
+# Removed from args above until I add secondary masters.
+
+# - name: Install k3s on other masters
+#   when: inventory_hostname in groups['k3s_secondary']
+#   shell: "curl -sfL https://get.k3s.io | sh -"
+#   args:
+#     creates: "/usr/local/bin/k3s"
+#   environment:
+#     K3S_TOKEN: "{{ k3s_token }}"
+#     INSTALL_K3S_EXEC: >-
+#       --server https://{{ master_ip }}:6443
+#       --flannel-iface tailscale0
+#       --node-ip {{ tailscale_ip }}
+#       --node-external-ip {{ tailscale_ip }}
+#       --disable metrics-server
+#       --disable traefik
+#       --disable servicelb
+
+- name: Get k3s token
+  become: true
+  shell: cat /var/lib/rancher/k3s/server/node-token || true
+  register: k3s_token
+  changed_when: false
+
+- name: Store k3s token
+  set_fact:
+    k3s_token: "{{ hostvars[master_hostname].k3s_token.stdout }}"
+
+- name: Install k3s on other workers
+  when: inventory_hostname in groups['k3s_worker']
+  shell: "curl -sfL https://get.k3s.io | sh -"
+  args:
+    warn: false
+    creates: "/usr/local/bin/k3s"
+  environment:
+    K3S_URL: "https://{{ master_ip }}:6443"
+    K3S_TOKEN: "{{ k3s_token }}"
+    INSTALL_K3S_EXEC: >-
+      --flannel-iface tailscale0
+      --node-ip {{ tailscale_ip }}
+      --node-external-ip {{ tailscale_ip }}
+
+- name: Install Docker
+  shell: curl -sSL https://get.docker.com | sh
+  args:
+    warn: false
+    creates: /usr/bin/docker
+
+- name: Add user to docker group
+  become: true
+  notify:
+    - reboot
+  user:
+    name: pi
+    groups: docker
+    append: yes
+
+- name: Install pip3
+  become: true
+  apt:
+    name: python3-pip
+    state: present
+
+- name: Install Docker python library
+  pip:
+    name: docker
+
+# REBOOT DEVICES IF THIS FAILS ON FIRST RUN
+# ansible all -m reboot --limit k3s --become
+- name: Login Pi user to Docker Hub
+  docker_login:
+    username: "{{ docker_username }}"
+    password: "{{ docker_password }}"
+
+- name: Set swap size to 2GB
+  become: true
+  notify:
+    - reboot
+  lineinfile:
+    dest: /etc/dphys-swapfile
+    regexp: "^CONF_SWAPSIZE="
+    line: "CONF_SWAPSIZE=2048"
+    state: present

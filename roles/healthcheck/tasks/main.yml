@@ -1,0 +1,26 @@
+---
+- name: Install required packages
+  become: yes
+  apt:
+    cache_valid_time: 3600
+    name:
+      - "jq"
+
+- name: Create scripts directory
+  file:
+    path: "/home/pi/.scripts"
+    state: directory
+
+- name: Create healthcheck script
+  template:
+    src: "../templates/healthcheck.sh"
+    dest: "/home/pi/.scripts/healthcheck.sh"
+    mode: "0744"
+
+- name: Create cron definition
+  become: yes
+  cron:
+    name: healthcheck
+    user: pi
+    job: "/home/pi/.scripts/healthcheck.sh"
+    cron_file: healthcheck

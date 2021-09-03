@@ -1,0 +1,15 @@
+# {{ ansible_managed }}
+[Unit]
+Description=ambient
+After=network.target
+
+[Service]
+Environment=PYTHONUNBUFFERED=1
+Environment="LOCATION={{ location }}"
+
+ExecStart=/usr/bin/python3 /home/pi/apps/ambient/main.py
+Restart=on-failure
+Type=notify
+
+[Install]
+WantedBy=default.target

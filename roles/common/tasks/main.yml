@@ -1,0 +1,74 @@
+---
+- name: Add SSH keys
+  get_url:
+    url: https://danhughes.dev/keys
+    dest: /home/pi/.ssh/authorized_keys
+    mode: 0644
+
+- name: Add pi user to the sudoers
+  copy:
+    dest: "/etc/sudoers.d/pi"
+    content: "pi ALL=(ALL) NOPASSWD: ALL"
+    mode: 0440
+
+- name: Disable password-only SSH
+  notify:
+    - restart ssh
+  lineinfile:
+    dest: /etc/ssh/sshd_config
+    regexp: "^PasswordAuthentication"
+    line: "PasswordAuthentication no"
+    state: present
+    backup: yes
+
+- name: Disable root SSH
+  notify:
+    - restart ssh
+  lineinfile:
+    dest: /etc/ssh/sshd_config
+    regexp: "^PermitRootLogin"
+    line: "PermitRootLogin no"
+    state: present
+
+- name: Enable user lingering
+  command: "loginctl enable-linger pi"
+  args:
+    creates: "/var/lib/systemd/linger/pi"
+  notify:
+    - reboot
+
+- name: Enable persistent journalling
+  file:
+    path: "/var/log/journal"
+    state: directory
+    owner: root
+    group: root
+
+- name: Allow user to read journal
+  user:
+    name: pi
+    groups: systemd-journal
+    append: true
+
+- name: Configure weekly reboot on Sunday at 2-3am
+  cron:
+    name: "regular_reboot"
+    cron_file: "regular_reboot"
+    weekday: "0"
+    minute: "{{ 59 |random(seed=inventory_hostname) }}"
+    hour: "2"
+    user: root
+    job: "/sbin/reboot >/dev/null 2>&1"
+
+- name: Disable MOTD
+  file:
+    path: /etc/motd
+    state: absent
+
+- name: Create update script
+  template:
+    src: "../templates/update.sh"
+    dest: "/home/pi/update.sh"
+    mode: 0764
+    owner: "pi"
+    group: "pi"

@@ -1,0 +1,37 @@
+---
+- name: Add Telegraf repository key
+  apt_key:
+    state: present
+    url: https://repos.influxdata.com/influxdb.key
+    keyring: /etc/apt/trusted.gpg.d/telegraf.gpg
+
+- name: Add Telegraf repository
+  apt_repository:
+    state: present
+    repo: "deb https://repos.influxdata.com/debian {{ ansible_distribution_release }} stable"
+    filename: telegraf
+  register: repo_telegraf
+
+- name: Update cache
+  apt:
+    update_cache: yes
+  when: repo_telegraf.changed
+
+- name: Install Telegraf from apt
+  apt:
+    state: present
+    name:
+      - telegraf
+
+- name: Add configuration
+  template:
+    src: "../templates/telegraf.conf"
+    dest: "/etc/telegraf/telegraf.conf"
+  notify: restart telegraf
+
+- name: Add telegraf user to video group (GPU metrics permission)
+  user:
+    name: telegraf
+    groups: video
+    append: yes
+  notify: restart telegraf

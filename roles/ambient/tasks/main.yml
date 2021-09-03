@@ -1,0 +1,48 @@
+---
+- name: Create app directory
+  file:
+    path: "/home/pi/apps/ambient"
+    state: directory
+
+- name: Copy app
+  notify:
+    - restart app
+  copy:
+    src: "../files/src/"
+    dest: "/home/pi/apps/ambient/"
+
+- name: Install apt python dependencies
+  become: yes
+  apt:
+    cache_valid_time: 3600
+    name:
+      - "python3-pip"
+      - "python3-setuptools"
+      - "python3-systemd"
+
+- name: Install python dependencies
+  pip:
+    requirements: "/home/pi/apps/ambient/requirements.txt"
+
+- name: Create systemd unit directory
+  file:
+    path: "/home/pi/.config/systemd/user"
+    state: directory
+
+- name: Create systemd unit file
+  template:
+    src: "../templates/systemd.service"
+    dest: "/home/pi/.config/systemd/user/ambient.service"
+
+- name: Run service
+  systemd:
+    state: started
+    daemon_reload: yes
+    scope: user
+    name: "ambient"
+
+- name: Enable service
+  systemd:
+    enabled: yes
+    scope: user
+    name: "ambient"

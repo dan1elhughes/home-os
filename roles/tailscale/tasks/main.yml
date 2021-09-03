@@ -1,0 +1,29 @@
+---
+- name: Add apt key
+  apt_key:
+    url: https://pkgs.tailscale.com/stable/raspbian/buster.gpg
+    state: present
+  register: apt_key_tailscale
+
+- name: Add repository
+  apt_repository:
+    state: present
+    repo: "deb https://pkgs.tailscale.com/stable/raspbian {{ ansible_distribution_release }} main"
+    filename: tailscale
+  register: repo_tailscale
+
+- name: Update cache
+  apt:
+    update_cache: yes
+  when: repo_tailscale.changed
+
+- name: Install Tailscale from apt
+  apt:
+    state: present
+    name:
+      - tailscale
+
+- name: Authenticate with tailscale
+  command: "tailscale up --authkey {{ tailscale_key }}"
+  args:
+    creates: /var/lib/tailscale/files

@@ -1,0 +1,12 @@
+---
+- name: Install boinccmd
+  become: yes
+  apt:
+    cache_valid_time: 3600
+    name:
+      - "boinc-client"
+
+- name: Login to boinc
+  command: 'boinccmd --join_acct_mgr "{{ boinc_url }}" "{{ boinc_username }}" "{{ boinc_password }}"'
+  args:
+    creates: "/var/lib/boinc/acct_mgr_login.xml"
