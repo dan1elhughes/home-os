@@ -1,3 +1,5 @@
 /group_vars/*.yml
 **/vars/main.yml
 /.kube/config.yaml
+
+.DS_Store
