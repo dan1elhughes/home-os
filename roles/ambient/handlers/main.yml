@@ -1,6 +1,0 @@
----
-- name: restart app
-  systemd:
-    state: restarted
-    scope: user
-    name: "ambient"

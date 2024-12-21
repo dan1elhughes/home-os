@@ -2,13 +2,13 @@
 - name: Add SSH keys
   get_url:
     url: https://danhughes.dev/keys
-    dest: /home/pi/.ssh/authorized_keys
+    dest: /home/{{ ansible_user }}/.ssh/authorized_keys
     mode: 0644
 
-- name: Add pi user to the sudoers
+- name: Add {{ ansible_user }} to the sudoers
   copy:
-    dest: "/etc/sudoers.d/pi"
-    content: "pi ALL=(ALL) NOPASSWD: ALL"
+    dest: "/etc/sudoers.d/{{ ansible_user }}"
+    content: "{{ ansible_user }} ALL=(ALL) NOPASSWD: ALL"
     mode: 0440
 
 - name: Disable password-only SSH
@@ -31,24 +31,11 @@
     state: present
 
 - name: Enable user lingering
-  command: "loginctl enable-linger pi"
+  command: "loginctl enable-linger {{ ansible_user }}"
   args:
-    creates: "/var/lib/systemd/linger/pi"
+    creates: "/var/lib/systemd/linger/{{ ansible_user }}"
   notify:
     - reboot
-
-- name: Enable persistent journalling
-  file:
-    path: "/var/log/journal"
-    state: directory
-    owner: root
-    group: root
-
-- name: Allow user to read journal
-  user:
-    name: pi
-    groups: systemd-journal
-    append: true
 
 - name: Configure weekly reboot on Sunday at 2-3am
   cron:
@@ -60,15 +47,16 @@
     user: root
     job: "/sbin/reboot >/dev/null 2>&1"
 
-- name: Disable MOTD
-  file:
-    path: /etc/motd
-    state: absent
+- name: Hush login
+  copy:
+    content: ""
+    dest: "/home/{{ ansible_user }}/.hushlogin"
+    force: false
 
 - name: Create update script
   template:
     src: "../templates/update.sh"
-    dest: "/home/pi/update.sh"
+    dest: "/home/{{ ansible_user }}/update.sh"
     mode: 0764
-    owner: "pi"
-    group: "pi"
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"

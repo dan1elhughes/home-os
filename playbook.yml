@@ -3,34 +3,3 @@
   become: true
   roles: ["common"]
   tags: ["common"]
-
-- hosts: all
-  become: true
-  roles: ["monitoring"]
-  tags: ["monitoring"]
-
-- hosts: all
-  roles: ["healthcheck"]
-  tags: ["healthcheck"]
-
-- hosts: boinc
-  roles: ["boinc"]
-  tags: ["boinc"]
-
-- hosts: ambient
-  roles: ["ambient"]
-  tags: ["ambient"]
-
-- hosts: tailscale
-  become: true
-  roles: ["tailscale"]
-  tags: ["tailscale"]
-
-# Depends on Tailscale.
-- hosts: k3s
-  roles: ["k3s"]
-  tags: ["k3s"]
-
-- hosts: camera
-  roles: ["camera"]
-  tags: ["camera"]

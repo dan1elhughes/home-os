@@ -12,10 +12,10 @@ fi
 ssh-keygen -R "$defaulthostname.local"
 
 # Add any SSH key to the device. We'll override this in Ansible later.
-ssh-copy-id "pi@$defaulthostname.local"
+ssh-copy-id "$USER@$defaulthostname.local"
 
 # Set the hostname, and reboot.
-ssh "pi@$defaulthostname.local" bash <<EOF
+ssh "$USER@$defaulthostname.local" bash <<EOF
 sudo hostnamectl set-hostname $hostname
 sudo sed -i 's/raspberrypi/$hostname/' /etc/hosts
 sudo reboot
