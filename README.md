@@ -11,5 +11,5 @@ $ ./init.sh <newhostname>
 ## Reboot cluster
 
 ```sh
-ansible -i inventory.ini all -m reboot --limit cluster --become
+ansible all -m reboot --limit cluster --become
 ```
