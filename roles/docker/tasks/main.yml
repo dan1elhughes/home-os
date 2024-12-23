@@ -6,7 +6,7 @@
 
 - name: Add Docker Repository
   apt_repository:
-    repo: deb [arch=armhf] https://download.docker.com/linux/raspbian bookworm stable
+    repo: deb [arch={{ ansible_architecture | replace('armv7l', 'armhf') }}] https://download.docker.com/linux/{{ ansible_lsb.id | lower }} {{ ansible_distribution_release }} stable
     state: present
     update_cache: yes
 
