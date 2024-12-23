@@ -34,8 +34,6 @@
   command: "loginctl enable-linger {{ ansible_user }}"
   args:
     creates: "/var/lib/systemd/linger/{{ ansible_user }}"
-  notify:
-    - reboot
 
 - name: Configure weekly reboot on Sunday at 2-3am
   cron:

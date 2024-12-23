@@ -3,6 +3,3 @@
   service:
     name: sshd
     state: restarted
-
-- name: reboot
-  reboot:

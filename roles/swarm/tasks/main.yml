@@ -1,0 +1,17 @@
+- name: Initialize docker swarm
+  when: inventory_hostname in groups['cluster_leader']
+  command:
+    cmd: docker swarm init
+    creates: "/var/lib/docker/swarm/state.json"
+
+- name: Get join token for other nodes
+  when: inventory_hostname in groups['cluster_leader']
+  command: docker swarm join-token manager
+  register: get_join_token
+  changed_when: false
+
+- name: Join docker swarm
+  when: inventory_hostname in groups['cluster_follower']
+  command:
+    cmd: "{{ hostvars[groups['cluster_leader'][0]].get_join_token.stdout_lines[2] }}"
+    creates: "/var/lib/docker/swarm/state.json"

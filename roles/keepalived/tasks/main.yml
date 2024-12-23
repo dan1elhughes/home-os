@@ -1,0 +1,28 @@
+---
+- name: Install keepalived
+  apt:
+    name:
+      - keepalived
+    state: present
+
+- name: Configure keepalived leader
+  when: inventory_hostname in groups['cluster_leader']
+  template:
+    src: keepalived.leader.conf
+    dest: /etc/keepalived/keepalived.conf
+    owner: root
+    group: root
+    mode: 0644
+  notify:
+    - restart_keepalived
+
+- name: Configure keepalived follower
+  when: inventory_hostname in groups['cluster_follower']
+  template:
+    src: keepalived.follower.conf
+    dest: /etc/keepalived/keepalived.conf
+    owner: root
+    group: root
+    mode: 0644
+  notify:
+    - restart_keepalived
