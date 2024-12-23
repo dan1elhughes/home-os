@@ -1,4 +1,10 @@
 ---
+- name: Install SSHD
+  apt:
+    name:
+      - openssh-server
+    state: present
+
 - name: Add SSH keys
   get_url:
     url: https://danhughes.dev/keys
