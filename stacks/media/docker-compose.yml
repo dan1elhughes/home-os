@@ -31,13 +31,26 @@ services:
       - TZ=Europe/London
     volumes:
       - "radarrconfig:/config"
-      - "radarrdata:/data"
       - "downloads:/downloads"
+      - "movies:/movies"
     ports:
       - "7878:7878"
     deploy:
       mode: replicated
       replicas: 1
+
+  plex:
+    container_name: plex
+    image: lscr.io/linuxserver/plex
+    restart: unless-stopped
+    environment:
+      - PUID=${PUID?error}
+      - PGID=${PGID?error}
+      - TZ=Europe/London
+    volumes:
+      - /dev/dri:/dev/dri
+      - "plexconfig:/config"
+      - "media:/media"
 
 volumes:
   transmission:
@@ -58,8 +71,26 @@ volumes:
       o: "addr=10.10.10.51,nfsvers=4"
       device: ":/media/nfs/radarr-data"
 
+  plexconfig:
+    driver_opts:
+      type: "nfs"
+      o: "addr=10.10.10.51,nfsvers=4"
+      device: ":/media/nfs/plex-config"
+
   downloads:
     driver_opts:
       type: "nfs"
       o: "addr=10.10.10.51,nfsvers=4"
       device: ":/media/nfs/downloads"
+
+  media:
+    driver_opts:
+      type: "nfs"
+      o: "addr=10.10.10.51,nfsvers=4"
+      device: ":/media/nfs/media"
+
+  movies:
+    driver_opts:
+      type: "nfs"
+      o: "addr=10.10.10.51,nfsvers=4"
+      device: ":/media/nfs/media/movies"
