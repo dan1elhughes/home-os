@@ -17,9 +17,6 @@ services:
     volumes:
       - "transmission:/config"
       - "downloads:/downloads"
-    deploy:
-      mode: replicated
-      replicas: 1
 
   radarr:
     container_name: radarr
@@ -35,9 +32,6 @@ services:
       - "movies:/movies"
     ports:
       - "7878:7878"
-    deploy:
-      mode: replicated
-      replicas: 1
 
   plex:
     container_name: plex
