@@ -51,6 +51,8 @@ services:
       - /dev/dri:/dev/dri
       - "plexconfig:/config"
       - "media:/media"
+    ports:
+      - "32400:32400"
 
 volumes:
   transmission:
