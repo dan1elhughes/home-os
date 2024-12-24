@@ -65,12 +65,6 @@ volumes:
       o: "addr=10.10.10.51,nfsvers=4"
       device: ":/media/nfs/radarr-config"
 
-  radarrdata:
-    driver_opts:
-      type: "nfs"
-      o: "addr=10.10.10.51,nfsvers=4"
-      device: ":/media/nfs/radarr-data"
-
   plexconfig:
     driver_opts:
       type: "nfs"
