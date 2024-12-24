@@ -2,8 +2,8 @@ version: "3.2"
 
 services:
   transmission:
-    image: lscr.io/linuxserver/transmission
     container_name: transmission
+    image: lscr.io/linuxserver/transmission
     restart: unless-stopped
     environment:
       - PUID=${PUID?error}
@@ -21,12 +21,42 @@ services:
       mode: replicated
       replicas: 1
 
+  radarr:
+    container_name: radarr
+    image: lscr.io/linuxserver/radarr
+    restart: unless-stopped
+    environment:
+      - PUID=${PUID?error}
+      - PGID=${PGID?error}
+      - TZ=Europe/London
+    volumes:
+      - "radarrconfig:/config"
+      - "radarrdata:/data"
+      - "downloads:/downloads"
+    ports:
+      - "7878:7878"
+    deploy:
+      mode: replicated
+      replicas: 1
+
 volumes:
   transmission:
     driver_opts:
       type: "nfs"
       o: "addr=10.10.10.51,nfsvers=4"
       device: ":/media/nfs/transmission"
+
+  radarrconfig:
+    driver_opts:
+      type: "nfs"
+      o: "addr=10.10.10.51,nfsvers=4"
+      device: ":/media/nfs/radarr-config"
+
+  radarrdata:
+    driver_opts:
+      type: "nfs"
+      o: "addr=10.10.10.51,nfsvers=4"
+      device: ":/media/nfs/radarr-data"
 
   downloads:
     driver_opts:
