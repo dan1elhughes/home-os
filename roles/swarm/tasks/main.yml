@@ -1,7 +1,7 @@
 - name: Initialize docker swarm
   when: inventory_hostname in groups['cluster_leader']
   command:
-    cmd: docker swarm init
+    cmd: docker swarm init --advertise-addr {{ ansible_host }}
     creates: "/var/lib/docker/swarm/state.json"
 
 - name: Get join token for other nodes
