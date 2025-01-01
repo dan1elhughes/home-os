@@ -8,8 +8,12 @@
 $ ./init.sh <newhostname>
 ```
 
-## Reboot cluster
+## Useful commands
 
 ```sh
+# Reboot cluster
 ansible all -m reboot --limit cluster --become
+
+# Poweroff cluster
+ansible all -m shell -a 'poweroff' --limit cluster --become
 ```
