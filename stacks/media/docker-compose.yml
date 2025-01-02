@@ -41,8 +41,8 @@ services:
       - TZ=Europe/London
     volumes:
       - "radarrconfig:/config"
-      - "downloads:/downloads"
-      - "movies:/movies"
+      - "downloads_complete:/downloads/complete"
+      - "media_movies:/movies"
     ports:
       - "7878:7878"
 
@@ -91,14 +91,18 @@ volumes:
       type: "nfs"
       o: "addr=10.10.10.51,nfsvers=4"
       device: ":/media/nfs/downloads"
+  downloads_complete:
+    driver_opts:
+      type: "nfs"
+      o: "addr=10.10.10.51,nfsvers=4"
+      device: ":/media/nfs/downloads/complete"
 
   media:
     driver_opts:
       type: "nfs"
       o: "addr=10.10.10.51,nfsvers=4"
       device: ":/media/nfs/media"
-
-  movies:
+  media_movies:
     driver_opts:
       type: "nfs"
       o: "addr=10.10.10.51,nfsvers=4"
