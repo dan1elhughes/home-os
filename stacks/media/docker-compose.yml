@@ -18,6 +18,19 @@ services:
       - "transmission:/config"
       - "downloads:/downloads"
 
+  prowlarr:
+    container_name: prowlarr
+    image: lscr.io/linuxserver/prowlarr
+    restart: unless-stopped
+    environment:
+      - PUID=${PUID?error}
+      - PGID=${PGID?error}
+      - TZ=Europe/London
+    volumes:
+      - "prowlarrconfig:/config"
+    ports:
+      - "9696:9696"
+
   radarr:
     container_name: radarr
     image: lscr.io/linuxserver/radarr
@@ -54,6 +67,12 @@ volumes:
       type: "nfs"
       o: "addr=10.10.10.51,nfsvers=4"
       device: ":/media/nfs/transmission"
+
+  prowlarrconfig:
+    driver_opts:
+      type: "nfs"
+      o: "addr=10.10.10.51,nfsvers=4"
+      device: ":/media/nfs/prowlarr-config"
 
   radarrconfig:
     driver_opts:
