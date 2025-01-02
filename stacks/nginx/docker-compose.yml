@@ -1,0 +1,25 @@
+services:
+  nginx:
+    container_name: nginx
+    image: jc21/nginx-proxy-manager
+    restart: unless-stopped
+    ports:
+      - '80:80'
+      - '81:81'
+      - '443:443'
+    volumes:
+      - nginx_config:/data
+      - nginx_letsencrypt:/etc/letsencrypt
+
+volumes:
+  nginx_config:
+    driver_opts:
+      type: "nfs"
+      o: "addr=10.10.10.51,nfsvers=4"
+      device: ":/media/nfs/nginx_config"
+
+  nginx_letsencrypt:
+    driver_opts:
+      type: "nfs"
+      o: "addr=10.10.10.51,nfsvers=4"
+      device: ":/media/nfs/nginx_letsencrypt"
