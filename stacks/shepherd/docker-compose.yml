@@ -4,14 +4,29 @@ services:
   shepherd:
     container_name: shepherd
     image: containrrr/shepherd
-    restart: unless-stopped
     environment:
       TZ: 'Europe/London'
       SLEEP_TIME: '30m'
       VERBOSE: 'true'
       IGNORELIST_SERVICES: "label=shepherd.autodeploy=false"
     volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
+      - /var/run/docker.sock:/var/run/docker.sock:ro
     deploy:
-      placement:
-        constraints: [node.role == manager]
+      replicas: 0
+      restart_policy:
+        condition: none
+      labels:
+        - swarm.cronjob.enable=true
+        - swarm.cronjob.schedule=0 4 * * * *
+        - swarm.cronjob.skip-running=true
+
+  scheduler:
+    container_name: scheduler
+    image: crazymax/swarm-cronjob
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    environment:
+      - "TZ=Europe/London"
+      - "LOG_LEVEL=info"
+      - "LOG_JSON=false"
