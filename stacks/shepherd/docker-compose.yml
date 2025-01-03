@@ -9,6 +9,7 @@ services:
       SLEEP_TIME: '30m'
       VERBOSE: 'true'
       IGNORELIST_SERVICES: "label=shepherd.autodeploy=false"
+      RUN_ONCE_AND_EXIT: "true"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
     deploy:
