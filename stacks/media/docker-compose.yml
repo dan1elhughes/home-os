@@ -43,6 +43,20 @@ services:
     ports:
       - "7878:7878"
 
+  sonarr:
+    container_name: sonarr
+    image: lscr.io/linuxserver/sonarr
+    environment:
+      - PUID=${PUID?error}
+      - PGID=${PGID?error}
+      - TZ=Europe/London
+    volumes:
+      - "sonarrconfig:/config"
+      - "downloads_complete:/downloads/complete"
+      - "media_tv:/tv"
+    ports:
+      - "8989:8989"
+
   plex:
     container_name: plex
     image: lscr.io/linuxserver/plex
@@ -76,6 +90,12 @@ volumes:
       o: "addr=10.10.10.51,nfsvers=4"
       device: ":/media/nfs/radarr-config"
 
+  sonarrconfig:
+    driver_opts:
+      type: "nfs"
+      o: "addr=10.10.10.51,nfsvers=4"
+      device: ":/media/nfs/sonarr-config"
+
   plexconfig:
     driver_opts:
       type: "nfs"
@@ -103,3 +123,8 @@ volumes:
       type: "nfs"
       o: "addr=10.10.10.51,nfsvers=4"
       device: ":/media/nfs/media/movies"
+  media_tv:
+    driver_opts:
+      type: "nfs"
+      o: "addr=10.10.10.51,nfsvers=4"
+      device: ":/media/nfs/media/tv"
