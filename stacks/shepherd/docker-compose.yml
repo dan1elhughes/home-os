@@ -23,7 +23,6 @@ services:
   scheduler:
     container_name: scheduler
     image: crazymax/swarm-cronjob
-    restart: unless-stopped
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
     environment:

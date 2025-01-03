@@ -4,7 +4,6 @@ services:
   transmission:
     container_name: transmission
     image: lscr.io/linuxserver/transmission
-    restart: unless-stopped
     environment:
       - PUID=${PUID?error}
       - PGID=${PGID?error}
@@ -21,7 +20,6 @@ services:
   prowlarr:
     container_name: prowlarr
     image: lscr.io/linuxserver/prowlarr
-    restart: unless-stopped
     environment:
       - PUID=${PUID?error}
       - PGID=${PGID?error}
@@ -34,7 +32,6 @@ services:
   radarr:
     container_name: radarr
     image: lscr.io/linuxserver/radarr
-    restart: unless-stopped
     environment:
       - PUID=${PUID?error}
       - PGID=${PGID?error}
@@ -49,7 +46,6 @@ services:
   plex:
     container_name: plex
     image: lscr.io/linuxserver/plex
-    restart: unless-stopped
     environment:
       - PUID=${PUID?error}
       - PGID=${PGID?error}
