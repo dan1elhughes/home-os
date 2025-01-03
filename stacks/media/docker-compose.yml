@@ -14,7 +14,7 @@ services:
       - "51413:51413/udp"
       - "9091:9091"
     volumes:
-      - "transmission:/config"
+      - "/mnt/cephfs/transmission:/config"
       - "downloads:/downloads"
 
   prowlarr:
@@ -25,7 +25,7 @@ services:
       - PGID=${PGID?error}
       - TZ=Europe/London
     volumes:
-      - "prowlarrconfig:/config"
+      - "/mnt/cephfs/prowlarr-config:/config"
     ports:
       - "9696:9696"
 
@@ -37,7 +37,7 @@ services:
       - PGID=${PGID?error}
       - TZ=Europe/London
     volumes:
-      - "radarrconfig:/config"
+      - "/mnt/cephfs/radarr-config:/config"
       - "downloads_complete:/downloads/complete"
       - "media_movies:/movies"
     ports:
@@ -51,7 +51,7 @@ services:
       - PGID=${PGID?error}
       - TZ=Europe/London
     volumes:
-      - "sonarrconfig:/config"
+      - "/mnt/cephfs/sonarr-config:/config"
       - "downloads_complete:/downloads/complete"
       - "media_tv:/tv"
     ports:
@@ -66,42 +66,12 @@ services:
       - TZ=Europe/London
     volumes:
       - /dev/dri:/dev/dri
-      - "plexconfig:/config"
+      - "/mnt/cephfs/plex-config:/config"
       - "media:/media"
     ports:
       - "32400:32400"
 
 volumes:
-  transmission:
-    driver_opts:
-      type: "nfs"
-      o: "addr=10.10.10.51,nfsvers=4"
-      device: ":/media/nfs/transmission"
-
-  prowlarrconfig:
-    driver_opts:
-      type: "nfs"
-      o: "addr=10.10.10.51,nfsvers=4"
-      device: ":/media/nfs/prowlarr-config"
-
-  radarrconfig:
-    driver_opts:
-      type: "nfs"
-      o: "addr=10.10.10.51,nfsvers=4"
-      device: ":/media/nfs/radarr-config"
-
-  sonarrconfig:
-    driver_opts:
-      type: "nfs"
-      o: "addr=10.10.10.51,nfsvers=4"
-      device: ":/media/nfs/sonarr-config"
-
-  plexconfig:
-    driver_opts:
-      type: "nfs"
-      o: "addr=10.10.10.51,nfsvers=4"
-      device: ":/media/nfs/plex-config"
-
   downloads:
     driver_opts:
       type: "nfs"

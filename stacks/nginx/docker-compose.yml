@@ -7,18 +7,5 @@ services:
       - '81:81'
       - '443:443'
     volumes:
-      - nginx_config:/data
-      - nginx_letsencrypt:/etc/letsencrypt
-
-volumes:
-  nginx_config:
-    driver_opts:
-      type: "nfs"
-      o: "addr=10.10.10.51,nfsvers=4"
-      device: ":/media/nfs/nginx_config"
-
-  nginx_letsencrypt:
-    driver_opts:
-      type: "nfs"
-      o: "addr=10.10.10.51,nfsvers=4"
-      device: ":/media/nfs/nginx_letsencrypt"
+      - "/mnt/cephfs/nginx_config:/data"
+      - "/mnt/cephfs/nginx_letsencrypt:/etc/letsencrypt"
