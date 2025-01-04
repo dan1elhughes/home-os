@@ -4,10 +4,8 @@ services:
     image: ghcr.io/tasmoadmin/tasmoadmin
     volumes:
       - "/mnt/cephfs/tasmoadmin-config:/data"
-    networks:
-      - main
 
 networks:
-  main:
+  default:
     external: true
     name: main
