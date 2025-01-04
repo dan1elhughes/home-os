@@ -1,0 +1,8 @@
+services:
+  tasmoadmin:
+    container_name: tasmoadmin
+    image: ghcr.io/tasmoadmin/tasmoadmin
+    ports:
+      - '8145:80'
+    volumes:
+      - "/mnt/cephfs/tasmoadmin-config:/data"
