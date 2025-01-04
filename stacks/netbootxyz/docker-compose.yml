@@ -9,6 +9,6 @@ services:
     volumes:
       - "/mnt/cephfs/netbootxyz-config:/config"
     ports:
-      - 3000:3000
-      - 69:69/udp
-      - 8447:80
+      - 8340:3000 # sets web configuration interface port, destination should match ${WEB_APP_PORT} variable
+      - 69:69/udp # sets tftp port
+      - 8080:80 # optional, destination should match ${NGINX_PORT} variable
