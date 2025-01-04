@@ -21,6 +21,7 @@ services:
       - /mnt/cephfs/portainer:/data
     networks:
       - agent_network
+      - main
     deploy:
       placement:
         constraints: [node.role == manager]
@@ -29,3 +30,6 @@ networks:
   agent_network:
     driver: overlay
     attachable: true
+  main:
+    external: true
+    name: main
