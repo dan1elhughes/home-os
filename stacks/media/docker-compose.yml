@@ -20,8 +20,6 @@ services:
       - TZ=Europe/London
     volumes:
       - "/mnt/cephfs/prowlarr-config:/config"
-    ports:
-      - "9696:9696"
 
   radarr:
     container_name: radarr
@@ -34,8 +32,6 @@ services:
       - "/mnt/cephfs/radarr-config:/config"
       - "downloads_complete:/downloads/complete"
       - "media_movies:/movies"
-    ports:
-      - "7878:7878"
 
   sonarr:
     container_name: sonarr
@@ -48,8 +44,6 @@ services:
       - "/mnt/cephfs/sonarr-config:/config"
       - "downloads_complete:/downloads/complete"
       - "media_tv:/tv"
-    ports:
-      - "8989:8989"
 
   plex:
     container_name: plex
@@ -62,8 +56,6 @@ services:
       - /dev/dri:/dev/dri
       - "/mnt/cephfs/plex-config:/config"
       - "media:/media"
-    ports:
-      - "32400:32400"
 
 volumes:
   downloads:
