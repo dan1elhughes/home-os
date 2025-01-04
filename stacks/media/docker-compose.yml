@@ -9,13 +9,11 @@ services:
       - PGID=${PGID?error}
       - USER=transmission
       - PASS=transmission
-    ports:
-      - "51413:51413/tcp"
-      - "51413:51413/udp"
-      - "9091:9091"
     volumes:
       - "/mnt/cephfs/transmission:/config"
       - "downloads:/downloads"
+    networks:
+      - main
 
   prowlarr:
     container_name: prowlarr
@@ -98,3 +96,8 @@ volumes:
       type: "nfs"
       o: "addr=10.10.10.51,nfsvers=4"
       device: ":/media/nfs/media/tv"
+
+networks:
+  main:
+    external: true
+    name: main
