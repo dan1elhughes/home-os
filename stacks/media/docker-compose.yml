@@ -12,8 +12,6 @@ services:
     volumes:
       - "/mnt/cephfs/transmission:/config"
       - "downloads:/downloads"
-    networks:
-      - main
 
   prowlarr:
     container_name: prowlarr
@@ -98,6 +96,6 @@ volumes:
       device: ":/media/nfs/media/tv"
 
 networks:
-  main:
+  default:
     external: true
     name: main
