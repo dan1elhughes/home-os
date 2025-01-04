@@ -1,5 +1,3 @@
-version: "3"
-
 services:
   shepherd:
     container_name: shepherd
