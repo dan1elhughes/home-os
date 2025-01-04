@@ -9,3 +9,11 @@ services:
     volumes:
       - "/mnt/cephfs/nginx_config:/data"
       - "/mnt/cephfs/nginx_letsencrypt:/etc/letsencrypt"
+    networks:
+      - main
+
+networks:
+  main:
+    driver: overlay
+    attachable: true
+    name: main

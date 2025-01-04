@@ -6,3 +6,10 @@ services:
       - '8145:80'
     volumes:
       - "/mnt/cephfs/tasmoadmin-config:/data"
+    networks:
+      - main
+
+networks:
+  main:
+    external: true
+    name: main
