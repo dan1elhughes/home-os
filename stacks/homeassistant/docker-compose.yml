@@ -6,10 +6,3 @@ services:
       - 1883:1883
     volumes:
       - /mnt/cephfs/mosquitto:/mosquitto
-    networks:
-      - main
-
-networks:
-  main:
-    external: true
-    name: main
