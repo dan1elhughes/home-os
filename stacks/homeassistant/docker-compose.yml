@@ -6,3 +6,24 @@ services:
       - 1883:1883
     volumes:
       - /mnt/cephfs/mosquitto:/mosquitto
+
+  homeassistant:
+    container_name: homeassistant
+    image: lscr.io/linuxserver/homeassistant
+    environment:
+      - PUID=${PUID?error}
+      - PGID=${PGID?error}
+      - TZ=Europe/London
+    volumes:
+      - /mnt/cephfs/homeassistant:/config
+    ports:
+      - 8123:8123
+    networks:
+      - main
+    depends_on:
+      - mosquitto
+
+networks:
+  main:
+    external: true
+    name: main
