@@ -6,6 +6,7 @@ services:
       - PUID=${PUID?error}
       - PGID=${PGID?error}
       - TZ=Europe/London
+      - APPRISE_ATTACH_SIZE=0 # Disables attachments
     volumes:
       - "/mnt/cephfs/apprise:/config"
 
