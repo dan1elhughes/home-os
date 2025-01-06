@@ -6,9 +6,10 @@ services:
       - PUID=${PUID?error}
       - PGID=${PGID?error}
       - TZ=Europe/London
-      - APPRISE_ATTACH_SIZE=0 # Disables attachments
+      - APPRISE_ATTACH_SIZE=10 # in Mb
     volumes:
-      - "/mnt/cephfs/apprise:/config"
+      - "/mnt/cephfs/apprise-config:/config"
+      - "/mnt/cephfs/apprise-attachments:/attachments"
 
 networks:
   default:
