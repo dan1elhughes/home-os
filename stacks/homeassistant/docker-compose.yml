@@ -17,8 +17,6 @@ services:
       - DOCKER_MODS=linuxserver/mods:homeassistant-hacs
     volumes:
       - /mnt/cephfs/homeassistant:/config
-    ports:
-      - 8123:8123
     networks:
       - main
     depends_on:
