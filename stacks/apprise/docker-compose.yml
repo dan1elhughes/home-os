@@ -1,0 +1,15 @@
+services:
+  apprise:
+    container_name: apprise
+    image: lscr.io/linuxserver/apprise-api
+    environment:
+      - PUID=${PUID?error}
+      - PGID=${PGID?error}
+      - TZ=Europe/London
+    volumes:
+      - "/mnt/cephfs/apprise:/config"
+
+networks:
+  default:
+    external: true
+    name: main
