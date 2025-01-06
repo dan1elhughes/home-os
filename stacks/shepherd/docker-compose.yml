@@ -8,6 +8,9 @@ services:
       VERBOSE: 'true'
       IGNORELIST_SERVICES: "label=shepherd.autodeploy=false"
       RUN_ONCE_AND_EXIT: "true"
+      REGISTRY_USER: "dan1elhughes"
+    secrets:
+      - shepherd_registry_password
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
     deploy:
@@ -28,3 +31,8 @@ services:
       - "TZ=Europe/London"
       - "LOG_LEVEL=info"
       - "LOG_JSON=false"
+
+secrets:
+  shepherd_registry_password:
+    # echo "..." | docker secret create shepherd_registry_password -
+    external: true
