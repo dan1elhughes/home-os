@@ -9,6 +9,7 @@ services:
       IGNORELIST_SERVICES: "label=shepherd.autodeploy=false"
       RUN_ONCE_AND_EXIT: "true"
       REGISTRY_USER: "dan1elhughes"
+      APPRISE_SIDECAR_URL: apprise:8000
     secrets:
       - shepherd_registry_password
     volumes:
@@ -21,6 +22,8 @@ services:
         - swarm.cronjob.enable=true
         - swarm.cronjob.schedule=0 4 * * * *
         - swarm.cronjob.skip-running=true
+    networks:
+      - main
 
   scheduler:
     container_name: scheduler
@@ -36,3 +39,8 @@ secrets:
   shepherd_registry_password:
     # echo "..." | docker secret create shepherd_registry_password -
     external: true
+
+networks:
+  main:
+    external: true
+    name: main
