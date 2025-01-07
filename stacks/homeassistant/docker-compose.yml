@@ -41,7 +41,7 @@ services:
         - homepage.group=Home
         - homepage.name=Home Assistant
         - homepage.icon=home-assistant
-        - homepage.href=https://homeassistant.danhughes.dev
+        - homepage.href=https://home.danhughes.dev
 
 networks:
   main:
