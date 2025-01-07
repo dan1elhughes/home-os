@@ -56,6 +56,12 @@ services:
       - /dev/dri:/dev/dri
       - "/mnt/cephfs/plex-config:/config"
       - "media:/media"
+    deploy:
+      labels:
+        - homepage.group=Media
+        - homepage.name=Plex
+        - homepage.icon=plex.png
+        - homepage.href=https://plex.danhughes.dev
 
 volumes:
   downloads:
