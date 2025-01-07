@@ -1,0 +1,15 @@
+services:
+  homepage:
+    container_name: homepage
+    image: ghcr.io/gethomepage/homepage
+    environment:
+      - PUID=${PUID?error}
+      - PGID=${PGID?error}
+    volumes:
+      - "/mnt/cephfs/homepage-config:/app/config"
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+
+networks:
+  default:
+    external: true
+    name: main
