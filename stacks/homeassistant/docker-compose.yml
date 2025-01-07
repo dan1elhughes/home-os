@@ -10,7 +10,7 @@ services:
       labels:
         - homepage.group=Home
         - homepage.name=Tasmoadmin
-        - homepage.icon=tasmoadmin.png
+        - homepage.icon=tasmoadmin
         - homepage.href=https://tasmoadmin.danhughes.dev
 
 
@@ -40,7 +40,7 @@ services:
       labels:
         - homepage.group=Home
         - homepage.name=Home Assistant
-        - homepage.icon=homeassistant.png
+        - homepage.icon=home-assistant
         - homepage.href=https://homeassistant.danhughes.dev
 
 networks:

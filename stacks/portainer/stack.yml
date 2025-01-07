@@ -24,7 +24,7 @@ services:
       labels:
         - homepage.group=Core
         - homepage.name=Portainer
-        - homepage.icon=portainer.png
+        - homepage.icon=portainer
         - homepage.href=https://portainer.danhughes.dev
 
 networks:

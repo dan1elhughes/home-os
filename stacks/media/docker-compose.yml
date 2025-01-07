@@ -14,7 +14,7 @@ services:
       labels:
         - homepage.group=Media
         - homepage.name=Transmission
-        - homepage.icon=transmission.png
+        - homepage.icon=transmission
         - homepage.href=https://transmission.danhughes.dev
 
   prowlarr:
@@ -30,7 +30,7 @@ services:
       labels:
         - homepage.group=Media
         - homepage.name=Prowlarr
-        - homepage.icon=prowlarr.png
+        - homepage.icon=prowlarr
         - homepage.href=https://prowlarr.danhughes.dev
 
   radarr:
@@ -48,7 +48,7 @@ services:
       labels:
         - homepage.group=Media
         - homepage.name=Radarr
-        - homepage.icon=radarr.png
+        - homepage.icon=radarr
         - homepage.href=https://radarr.danhughes.dev
 
   sonarr:
@@ -66,7 +66,7 @@ services:
       labels:
         - homepage.group=Media
         - homepage.name=Sonarr
-        - homepage.icon=sonarr.png
+        - homepage.icon=sonarr
         - homepage.href=https://sonarr.danhughes.dev
 
   plex:
@@ -84,7 +84,7 @@ services:
       labels:
         - homepage.group=Media
         - homepage.name=Plex
-        - homepage.icon=plex.png
+        - homepage.icon=plex
         - homepage.href=https://plex.danhughes.dev
 
 volumes:
