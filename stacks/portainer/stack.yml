@@ -21,6 +21,11 @@ services:
     deploy:
       placement:
         constraints: [node.role == manager]
+      labels:
+        - homepage.group=Core
+        - homepage.name=Portainer
+        - homepage.icon=portainer.png
+        - homepage.href=https://portainer.danhughes.dev
 
 networks:
   agent_network:

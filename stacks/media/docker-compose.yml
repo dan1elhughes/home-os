@@ -10,6 +10,12 @@ services:
     volumes:
       - "/mnt/cephfs/transmission:/config"
       - "downloads:/downloads"
+    deploy:
+      labels:
+        - homepage.group=Media
+        - homepage.name=Transmission
+        - homepage.icon=transmission.png
+        - homepage.href=https://transmission.danhughes.dev
 
   prowlarr:
     container_name: prowlarr
@@ -20,6 +26,12 @@ services:
       - TZ=Europe/London
     volumes:
       - "/mnt/cephfs/prowlarr-config:/config"
+    deploy:
+      labels:
+        - homepage.group=Media
+        - homepage.name=Prowlarr
+        - homepage.icon=prowlarr.png
+        - homepage.href=https://prowlarr.danhughes.dev
 
   radarr:
     container_name: radarr
@@ -32,6 +44,12 @@ services:
       - "/mnt/cephfs/radarr-config:/config"
       - "downloads_complete:/downloads/complete"
       - "media_movies:/movies"
+    deploy:
+      labels:
+        - homepage.group=Media
+        - homepage.name=Radarr
+        - homepage.icon=radarr.png
+        - homepage.href=https://radarr.danhughes.dev
 
   sonarr:
     container_name: sonarr
@@ -44,6 +62,12 @@ services:
       - "/mnt/cephfs/sonarr-config:/config"
       - "downloads_complete:/downloads/complete"
       - "media_tv:/tv"
+    deploy:
+      labels:
+        - homepage.group=Media
+        - homepage.name=Sonarr
+        - homepage.icon=sonarr.png
+        - homepage.href=https://sonarr.danhughes.dev
 
   plex:
     container_name: plex

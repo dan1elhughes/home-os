@@ -1,4 +1,19 @@
 services:
+  tasmoadmin:
+    container_name: tasmoadmin
+    image: ghcr.io/tasmoadmin/tasmoadmin
+    volumes:
+      - "/mnt/cephfs/tasmoadmin-config:/data"
+    networks:
+      - main
+    deploy:
+      labels:
+        - homepage.group=Home
+        - homepage.name=Tasmoadmin
+        - homepage.icon=tasmoadmin.png
+        - homepage.href=https://tasmoadmin.danhughes.dev
+
+
   mosquitto:
     container_name: mosquitto
     image: eclipse-mosquitto
@@ -21,6 +36,12 @@ services:
       - main
     depends_on:
       - mosquitto
+    deploy:
+      labels:
+        - homepage.group=Home
+        - homepage.name=Home Assistant
+        - homepage.icon=homeassistant.png
+        - homepage.href=https://homeassistant.danhughes.dev
 
 networks:
   main:

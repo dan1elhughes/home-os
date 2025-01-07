@@ -11,6 +11,12 @@ services:
       - "/mnt/cephfs/nginx_letsencrypt:/etc/letsencrypt"
     networks:
       - main
+    deploy:
+      labels:
+        - homepage.group=Core
+        - homepage.name=NGINX Proxy Manager
+        - homepage.icon=nginx.png
+        - homepage.href=https://nginx.danhughes.dev
 
 networks:
   main:
