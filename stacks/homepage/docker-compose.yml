@@ -8,6 +8,9 @@ services:
     volumes:
       - "/mnt/cephfs/homepage-config:/app/config"
       - "/var/run/docker.sock:/var/run/docker.sock:ro"
+    deploy:
+      placement:
+        constraints: [node.role == manager]
 
 networks:
   default:
