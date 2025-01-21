@@ -19,21 +19,18 @@
 - name: Disable password-only SSH
   notify:
     - restart ssh
-  lineinfile:
-    dest: /etc/ssh/sshd_config
-    regexp: "^PasswordAuthentication"
-    line: "PasswordAuthentication no"
-    state: present
-    backup: yes
+  copy:
+    dest: /etc/ssh/sshd_config.d/password_authentication.conf
+    content: |
+      PasswordAuthentication no
 
 - name: Disable root SSH
   notify:
     - restart ssh
-  lineinfile:
-    dest: /etc/ssh/sshd_config
-    regexp: "^PermitRootLogin"
-    line: "PermitRootLogin no"
-    state: present
+  copy:
+    dest: /etc/ssh/sshd_config.d/permit_root_login.conf
+    content: |
+      PermitRootLogin no
 
 - name: Enable user lingering
   command: "loginctl enable-linger {{ ansible_user }}"
