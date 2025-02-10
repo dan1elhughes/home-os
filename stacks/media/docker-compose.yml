@@ -69,6 +69,24 @@ services:
         - homepage.icon=sonarr
         - homepage.href=https://sonarr.danhughes.dev
 
+  lidarr:
+    container_name: lidarr
+    image: lscr.io/linuxserver/lidarr
+    environment:
+      - PUID=${PUID?error}
+      - PGID=${PGID?error}
+      - TZ=Europe/London
+    volumes:
+      - "/mnt/cephfs/lidarr-config:/config"
+      - "downloads_complete:/downloads/complete"
+      - "media_music:/music"
+    deploy:
+      labels:
+        - homepage.group=Media
+        - homepage.name=Lidarr
+        - homepage.icon=Lidarr
+        - homepage.href=https://lidarr.danhughes.dev
+
   plex:
     container_name: plex
     image: lscr.io/linuxserver/plex
@@ -114,6 +132,11 @@ volumes:
       type: "nfs"
       o: "addr=10.10.10.51,nfsvers=4"
       device: ":/media/nfs/media/tv"
+  media_music:
+    driver_opts:
+      type: "nfs"
+      o: "addr=10.10.10.51,nfsvers=4"
+      device: ":/media/nfs/media/music"
 
 networks:
   default:
