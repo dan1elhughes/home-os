@@ -105,6 +105,14 @@ services:
         - homepage.icon=plex
         - homepage.href=https://plex.danhughes.dev
 
+  # Port 4533
+  navidrome:
+    container_name: navidrome
+    image: deluan/navidrome
+    volumes:
+      - "/mnt/cephfs/navidrome-data:/data"
+      - "media_music:/music:ro"
+
 volumes:
   downloads:
     driver_opts:
