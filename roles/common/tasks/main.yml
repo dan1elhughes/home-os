@@ -53,10 +53,11 @@
     dest: "/home/{{ ansible_user }}/.hushlogin"
     force: false
 
-- name: Create update script
-  template:
-    src: "../templates/update.sh"
-    dest: "/home/{{ ansible_user }}/update.sh"
-    mode: 0764
-    owner: "{{ ansible_user }}"
-    group: "{{ ansible_user }}"
+- name: Update and upgrade apt packages
+  become: true
+  apt:
+    cache_valid_time: 86400 # 1 day
+    update_cache: yes
+    upgrade: yes
+    autoremove: yes
+    clean: yes
