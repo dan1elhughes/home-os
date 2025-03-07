@@ -22,3 +22,19 @@
     name: "{{ ansible_user }}"
     groups: docker
     append: yes
+
+- name: Create /usr/lib/systemd/system/docker.service.d directory
+  file:
+    state: directory
+    path: /usr/lib/systemd/system/docker.service.d
+    owner: root
+    group: root
+    mode: 0755
+
+- name: Create Docker after-mount settings
+  copy:
+    src: after-mount.conf
+    dest: /usr/lib/systemd/system/docker.service.d/after-mount.conf
+    owner: root
+    group: root
+    mode: 0644
