@@ -8,9 +8,12 @@
 $ ./init.sh <newhostname>
 ```
 
-## Useful commands
+## How to
 
 ```sh
+# Run playbook
+ansible-playbook -i inventory.ini playbook.yml
+
 # Reboot cluster
 ansible all -m reboot --limit cluster --become
 
