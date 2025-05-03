@@ -22,7 +22,7 @@ services:
     environment:
       - PUID=${PUID?error}
       - PGID=${PGID?error}
-      - TZ=Europe/London
+      - TZ=${TZ?error}
       - DOCKER_MODS=linuxserver/mods:homeassistant-hacs
     volumes:
       - /mnt/cephfs/homeassistant:/config

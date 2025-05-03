@@ -5,7 +5,7 @@ services:
     environment:
       - PUID=${PUID?error}
       - PGID=${PGID?error}
-      - TZ=Europe/London
+      - TZ=${TZ?error}
       - WS_FALLBACK=true #optional
 
 networks:

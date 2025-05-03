@@ -21,7 +21,7 @@ services:
     environment:
       - PUID=${PUID?error}
       - PGID=${PGID?error}
-      - TZ=Europe/London
+      - TZ=${TZ?error}
     volumes:
       - "/mnt/cephfs/prowlarr-config:/config"
     deploy:
@@ -36,7 +36,7 @@ services:
     environment:
       - PUID=${PUID?error}
       - PGID=${PGID?error}
-      - TZ=Europe/London
+      - TZ=${TZ?error}
     volumes:
       - "/mnt/cephfs/radarr-config:/config"
       - "downloads_complete:/downloads/complete"
@@ -53,7 +53,7 @@ services:
     environment:
       - PUID=${PUID?error}
       - PGID=${PGID?error}
-      - TZ=Europe/London
+      - TZ=${TZ?error}
     volumes:
       - "/mnt/cephfs/sonarr-config:/config"
       - "downloads_complete:/downloads/complete"
@@ -70,7 +70,7 @@ services:
     environment:
       - PUID=${PUID?error}
       - PGID=${PGID?error}
-      - TZ=Europe/London
+      - TZ=${TZ?error}
     volumes:
       - "/mnt/cephfs/lidarr-config:/config"
       - "downloads_complete:/downloads/complete"
@@ -87,7 +87,7 @@ services:
     environment:
       - PUID=${PUID?error}
       - PGID=${PGID?error}
-      - TZ=Europe/London
+      - TZ=${TZ?error}
     volumes:
       - /dev/dri:/dev/dri
       - "/mnt/cephfs/plex-config:/config"

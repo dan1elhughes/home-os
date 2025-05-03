@@ -26,9 +26,9 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
     environment:
-      - "TZ=Europe/London"
-      - "LOG_LEVEL=info"
-      - "LOG_JSON=false"
+      - TZ=${TZ?error}
+      - LOG_LEVEL=info
+      - LOG_JSON=false
 
 secrets:
   shepherd_registry_password:

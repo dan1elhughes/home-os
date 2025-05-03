@@ -4,7 +4,7 @@ services:
     environment:
       - PUID=${PUID?error}
       - PGID=${PGID?error}
-      - TZ=Europe/London
+      - TZ=${TZ?error}
       - APPRISE_ATTACH_SIZE=10 # in Mb
     volumes:
       - "/mnt/cephfs/apprise-config:/config"
