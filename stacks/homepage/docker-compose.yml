@@ -4,6 +4,7 @@ services:
     environment:
       - PUID=${PUID?error}
       - PGID=${PGID?error}
+      - HOMEPAGE_ALLOWED_HOSTS=homepage.danhughes.dev
     volumes:
       - "/mnt/cephfs/homepage-config:/app/config"
       - "/var/run/docker.sock:/var/run/docker.sock:ro"
