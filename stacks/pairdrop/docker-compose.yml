@@ -7,5 +7,8 @@ services:
       - PGID=${PGID?error}
       - TZ=Europe/London
       - WS_FALLBACK=true #optional
-    networks:
-      - main
+
+networks:
+  default:
+    external: true
+    name: main

@@ -3,8 +3,6 @@ services:
     image: ghcr.io/tasmoadmin/tasmoadmin
     volumes:
       - "/mnt/cephfs/tasmoadmin-config:/data"
-    networks:
-      - main
     deploy:
       labels:
         - homepage.group=Home
@@ -28,8 +26,6 @@ services:
       - DOCKER_MODS=linuxserver/mods:homeassistant-hacs
     volumes:
       - /mnt/cephfs/homeassistant:/config
-    networks:
-      - main
     depends_on:
       - mosquitto
     deploy:
@@ -40,6 +36,6 @@ services:
         - homepage.href=https://home.danhughes.dev
 
 networks:
-  main:
+  default:
     external: true
     name: main
