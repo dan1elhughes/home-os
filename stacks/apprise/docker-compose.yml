@@ -1,6 +1,5 @@
 services:
   apprise:
-    container_name: apprise
     image: lscr.io/linuxserver/apprise-api
     environment:
       - PUID=${PUID?error}

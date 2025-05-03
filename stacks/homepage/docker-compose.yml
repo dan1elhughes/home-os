@@ -1,6 +1,5 @@
 services:
   homepage:
-    container_name: homepage
     image: ghcr.io/gethomepage/homepage
     environment:
       - PUID=${PUID?error}

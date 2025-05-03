@@ -1,7 +1,6 @@
 ---
 services:
   pairdrop:
-    container_name: pairdrop
     image: lscr.io/linuxserver/pairdrop:latest
     environment:
       - PUID=${PUID?error}

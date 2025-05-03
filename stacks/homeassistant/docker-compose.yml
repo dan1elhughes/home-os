@@ -1,6 +1,5 @@
 services:
   tasmoadmin:
-    container_name: tasmoadmin
     image: ghcr.io/tasmoadmin/tasmoadmin
     volumes:
       - "/mnt/cephfs/tasmoadmin-config:/data"
@@ -13,9 +12,7 @@ services:
         - homepage.icon=tasmoadmin
         - homepage.href=https://tasmoadmin.danhughes.dev
 
-
   mosquitto:
-    container_name: mosquitto
     image: eclipse-mosquitto
     ports:
       - 1883:1883
@@ -23,7 +20,6 @@ services:
       - /mnt/cephfs/mosquitto:/mosquitto
 
   homeassistant:
-    container_name: homeassistant
     image: lscr.io/linuxserver/homeassistant
     environment:
       - PUID=${PUID?error}

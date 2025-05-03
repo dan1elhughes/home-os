@@ -1,6 +1,5 @@
 services:
   transmission:
-    container_name: transmission
     image: lscr.io/linuxserver/transmission
     environment:
       - PUID=${PUID?error}
@@ -18,7 +17,6 @@ services:
         - homepage.href=https://transmission.danhughes.dev
 
   prowlarr:
-    container_name: prowlarr
     image: lscr.io/linuxserver/prowlarr
     environment:
       - PUID=${PUID?error}
@@ -34,7 +32,6 @@ services:
         - homepage.href=https://prowlarr.danhughes.dev
 
   radarr:
-    container_name: radarr
     image: lscr.io/linuxserver/radarr
     environment:
       - PUID=${PUID?error}
@@ -52,7 +49,6 @@ services:
         - homepage.href=https://radarr.danhughes.dev
 
   sonarr:
-    container_name: sonarr
     image: lscr.io/linuxserver/sonarr
     environment:
       - PUID=${PUID?error}
@@ -70,7 +66,6 @@ services:
         - homepage.href=https://sonarr.danhughes.dev
 
   lidarr:
-    container_name: lidarr
     image: lscr.io/linuxserver/lidarr
     environment:
       - PUID=${PUID?error}
@@ -88,7 +83,6 @@ services:
         - homepage.href=https://lidarr.danhughes.dev
 
   plex:
-    container_name: plex
     image: lscr.io/linuxserver/plex
     environment:
       - PUID=${PUID?error}
@@ -107,7 +101,6 @@ services:
 
   # Port 4533
   navidrome:
-    container_name: navidrome
     image: deluan/navidrome
     volumes:
       - "/mnt/cephfs/navidrome-data:/data"
