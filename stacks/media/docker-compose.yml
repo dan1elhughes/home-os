@@ -110,34 +110,34 @@ volumes:
   downloads:
     driver_opts:
       type: "nfs"
-      o: "addr=10.10.10.51,nfsvers=4"
-      device: ":/media/nfs/downloads"
+      o: "addr=10.10.10.60,nfsvers=4"
+      device: ":/mnt/SSD/downloads"
   downloads_complete:
     driver_opts:
       type: "nfs"
-      o: "addr=10.10.10.51,nfsvers=4"
-      device: ":/media/nfs/downloads/complete"
+      o: "addr=10.10.10.60,nfsvers=4"
+      device: ":/mnt/SSD/downloads/complete"
 
   media:
     driver_opts:
       type: "nfs"
-      o: "addr=10.10.10.51,nfsvers=4"
-      device: ":/media/nfs/media"
+      o: "addr=10.10.10.60,nfsvers=4"
+      device: ":/mnt/HDD/media"
   media_movies:
     driver_opts:
       type: "nfs"
-      o: "addr=10.10.10.51,nfsvers=4"
-      device: ":/media/nfs/media/movies"
+      o: "addr=10.10.10.60,nfsvers=4"
+      device: ":/mnt/HDD/media/movies"
   media_tv:
     driver_opts:
       type: "nfs"
-      o: "addr=10.10.10.51,nfsvers=4"
-      device: ":/media/nfs/media/tv"
+      o: "addr=10.10.10.60,nfsvers=4"
+      device: ":/mnt/HDD/media/tv"
   media_music:
     driver_opts:
       type: "nfs"
-      o: "addr=10.10.10.51,nfsvers=4"
-      device: ":/media/nfs/media/music"
+      o: "addr=10.10.10.60,nfsvers=4"
+      device: ":/mnt/HDD/media/music"
 
 networks:
   default:
