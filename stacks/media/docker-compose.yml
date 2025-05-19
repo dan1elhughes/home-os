@@ -4,8 +4,6 @@ services:
     environment:
       - PUID=${PUID?error}
       - PGID=${PGID?error}
-      - USER=transmission
-      - PASS=transmission
     volumes:
       - "/mnt/cephfs/transmission:/config"
       - "downloads:/downloads"
