@@ -23,6 +23,18 @@
     groups: docker
     append: yes
 
+- name: Add {{ ansible_user }} to the render group
+  user:
+    name: "{{ ansible_user }}"
+    groups: render
+    append: yes
+
+- name: Add {{ ansible_user }} to the video group
+  user:
+    name: "{{ ansible_user }}"
+    groups: video
+    append: yes
+
 - name: Create /usr/lib/systemd/system/docker.service.d directory
   file:
     state: directory
