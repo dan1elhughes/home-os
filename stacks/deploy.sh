@@ -1,3 +1,5 @@
+#!/usr/bin/env bash
+
 export $(cat .env)
 
 deploy_stack() {
