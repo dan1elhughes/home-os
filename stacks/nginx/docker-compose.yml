@@ -1,10 +1,11 @@
 services:
   nginx:
-    image: jc21/nginx-proxy-manager
+    # https://github.com/NginxProxyManager/nginx-proxy-manager/issues/4606
+    image: jc21/nginx-proxy-manager:2.12.3
     ports:
-      - '80:80'
-      - '81:81'
-      - '443:443'
+      - "80:80"
+      - "81:81"
+      - "443:443"
     volumes:
       - "/mnt/cephfs/nginx_config:/data"
       - "/mnt/cephfs/nginx_letsencrypt:/etc/letsencrypt"
