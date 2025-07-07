@@ -80,23 +80,6 @@ services:
         - homepage.icon=Lidarr
         - homepage.href=https://lidarr.danhughes.dev
 
-  plex:
-    image: lscr.io/linuxserver/plex
-    environment:
-      - PUID=${PUID?error}
-      - PGID=${PGID?error}
-      - TZ=${TZ?error}
-    volumes:
-      - /dev/dri:/dev/dri
-      - "/mnt/cephfs/plex-config:/config"
-      - "media:/media"
-    deploy:
-      labels:
-        - homepage.group=Media
-        - homepage.name=Plex
-        - homepage.icon=plex
-        - homepage.href=https://plex.danhughes.dev
-
   jellyfin:
     image: lscr.io/linuxserver/jellyfin
     environment:
