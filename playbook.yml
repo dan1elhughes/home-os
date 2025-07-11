@@ -17,3 +17,8 @@
   become: true
   roles: ["swarm"]
   tags: ["swarm"]
+
+- hosts: all
+  become: true
+  roles: ["cockpit"]
+  tags: ["cockpit"]
