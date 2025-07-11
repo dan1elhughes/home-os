@@ -28,6 +28,8 @@ services:
         - homepage.name=Prowlarr
         - homepage.icon=prowlarr
         - homepage.href=https://prowlarr.danhughes.dev
+    healthcheck:
+      test: curl -f http://localhost:9696/ping || exit 1
 
   radarr:
     image: lscr.io/linuxserver/radarr
@@ -45,6 +47,8 @@ services:
         - homepage.name=Radarr
         - homepage.icon=radarr
         - homepage.href=https://radarr.danhughes.dev
+    healthcheck:
+      test: curl -f http://localhost:7878/ping || exit 1
 
   sonarr:
     image: lscr.io/linuxserver/sonarr
@@ -62,6 +66,8 @@ services:
         - homepage.name=Sonarr
         - homepage.icon=sonarr
         - homepage.href=https://sonarr.danhughes.dev
+    healthcheck:
+      test: curl -f http://localhost:8989/ping || exit 1
 
   lidarr:
     image: lscr.io/linuxserver/lidarr
@@ -79,6 +85,8 @@ services:
         - homepage.name=Lidarr
         - homepage.icon=Lidarr
         - homepage.href=https://lidarr.danhughes.dev
+    healthcheck:
+      test: curl -f http://localhost:8686/ping || exit 1
 
   jellyfin:
     image: lscr.io/linuxserver/jellyfin
@@ -96,6 +104,8 @@ services:
         - homepage.name=Jellyfin
         - homepage.icon=jellyfin
         - homepage.href=https://jellyfin.danhughes.dev
+    healthcheck:
+      test: curl -f http://localhost:8096/health || exit 1
 
   navidrome:
     image: deluan/navidrome
