@@ -1,7 +1,6 @@
 services:
   nginx:
-    # https://github.com/NginxProxyManager/nginx-proxy-manager/issues/4606
-    image: jc21/nginx-proxy-manager:2.12.3
+    image: jc21/nginx-proxy-manager
     ports:
       - "80:80"
       - "81:81"
