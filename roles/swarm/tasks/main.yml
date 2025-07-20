@@ -15,3 +15,20 @@
   command:
     cmd: "{{ hostvars[groups['cluster_leader'][0]].get_join_token.stdout_lines[2] }}"
     creates: "/var/lib/docker/swarm/state.json"
+
+- name: Create override directory for microceph
+  file:
+    path: /etc/systemd/system/snap.microceph.daemon.service.d
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Create systemd override for microceph.daemon to include network-online.target
+  template:
+    src: snap_microceph_daemon_override.j2.conf
+    dest: /etc/systemd/system/snap.microceph.daemon.service.d/override.conf
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Reload systemd
