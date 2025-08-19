@@ -1,0 +1,11 @@
+---
+services:
+    sponsorblock:
+        image: ghcr.io/dmunozv04/isponsorblocktv
+        volumes:
+          - "/mnt/cephfs/sponsorblock:/app/data"
+
+networks:
+  default:
+    external: true
+    name: main
