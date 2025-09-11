@@ -8,7 +8,7 @@
   roles: ["keepalived"]
   tags: ["keepalived"]
 
-- hosts: cluster
+- hosts: docker
   become: true
   roles: ["docker"]
   tags: ["docker"]
