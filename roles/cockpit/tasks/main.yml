@@ -3,3 +3,9 @@
     name:
       - cockpit
     state: present
+
+- name: Ensure cockpit service is enabled and running
+  service:
+    name: cockpit
+    state: started
+    enabled: yes
