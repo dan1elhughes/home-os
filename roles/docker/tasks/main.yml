@@ -1,21 +1,51 @@
-- name: Add Docker GPG apt Key
-  apt_key:
-    url: "https://download.docker.com/linux/{{ ansible_lsb.id | lower }}/gpg"
-    state: present
-
-- name: Add Docker Repository
-  apt_repository:
-    repo: "deb [arch=amd64] https://download.docker.com/linux/{{ ansible_lsb.id | lower }} {{ ansible_distribution_release }} stable"
+---
+- name: Ensure required dependencies are installed
+  ansible.builtin.apt:
+    name:
+      - ca-certificates
+      - curl
+      - gnupg
+      - lsb-release
     state: present
     update_cache: yes
 
-- name: Install Docker
-  apt:
+- name: Create keyrings directory
+  ansible.builtin.file:
+    path: /etc/apt/keyrings
+    state: directory
+    mode: "0755"
+
+- name: Download Docker GPG key
+  ansible.builtin.get_url:
+    url: https://download.docker.com/linux/ubuntu/gpg
+    dest: /etc/apt/keyrings/docker.asc
+    mode: "0644"
+
+- name: Add Docker apt repository
+  ansible.builtin.apt_repository:
+    repo: "deb [arch=amd64 signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu {{ ansible_lsb.codename | default(ansible_distribution_release) }} stable"
+    state: present
+    filename: docker
+  register: docker_apt_repository
+
+- name: Update apt cache if apt repository changed
+  ansible.builtin.apt:
+    update_cache: yes
+  when: docker_apt_repository.changed
+
+- name: Install Docker Engine and related packages
+  ansible.builtin.apt:
     name:
       - docker-ce
       - docker-ce-cli
       - containerd.io
     state: present
+
+- name: Ensure Docker service is enabled and running
+  ansible.builtin.service:
+    name: docker
+    state: started
+    enabled: yes
 
 - name: Add user to docker group
   user:
