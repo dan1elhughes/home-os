@@ -88,25 +88,6 @@ services:
     healthcheck:
       test: curl -f http://localhost:8686/ping || exit 1
 
-  jellyfin:
-    image: lscr.io/linuxserver/jellyfin
-    environment:
-      - PUID=${PUID?error}
-      - PGID=${PGID?error}
-      - TZ=${TZ?error}
-    volumes:
-      - "/mnt/cephfs/jellyfin-config:/config"
-      - "media:/media"
-      - "/dev/dri:/dev/dri"
-    deploy:
-      labels:
-        - homepage.group=Media
-        - homepage.name=Jellyfin
-        - homepage.icon=jellyfin
-        - homepage.href=https://jellyfin.danhughes.dev
-    healthcheck:
-      test: curl -f http://localhost:8096/health || exit 1
-
   navidrome:
     image: deluan/navidrome
     volumes:
