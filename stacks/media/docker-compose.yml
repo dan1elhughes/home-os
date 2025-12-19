@@ -1,6 +1,6 @@
 services:
   transmission:
-    image: lscr.io/linuxserver/transmission@sha256:2d8d07715382a58f83fdcd1751e08c736711d76eecf71135106312fd370af933
+    image: lscr.io/linuxserver/transmission:4.0.6@sha256:2d8d07715382a58f83fdcd1751e08c736711d76eecf71135106312fd370af933
     environment:
       - PUID=${PUID?error}
       - PGID=${PGID?error}
@@ -15,7 +15,7 @@ services:
         - homepage.href=https://transmission.danhughes.dev
 
   prowlarr:
-    image: lscr.io/linuxserver/prowlarr@sha256:67a8aaedcfd6989f3030b937a6a07007310b1dfc7ee8df16d2cbfa48d1c1158c
+    image: lscr.io/linuxserver/prowlarr:2.3.0@sha256:67a8aaedcfd6989f3030b937a6a07007310b1dfc7ee8df16d2cbfa48d1c1158c
     environment:
       - PUID=${PUID?error}
       - PGID=${PGID?error}
@@ -32,7 +32,7 @@ services:
       test: curl -f http://localhost:9696/ping || exit 1
 
   radarr:
-    image: lscr.io/linuxserver/radarr@sha256:6c0948b42c149e36bb3dbc0b64d36c77b2d3c9dccf1b424c4f72af1e57ba0c21
+    image: lscr.io/linuxserver/radarr:6.0.4@sha256:6c0948b42c149e36bb3dbc0b64d36c77b2d3c9dccf1b424c4f72af1e57ba0c21
     environment:
       - PUID=${PUID?error}
       - PGID=${PGID?error}
@@ -51,7 +51,7 @@ services:
       test: curl -f http://localhost:7878/ping || exit 1
 
   sonarr:
-    image: lscr.io/linuxserver/sonarr@sha256:60e5edcac39172294ad22d55d1b08c2c0a9fe658cad2f2c4d742ae017d7874de
+    image: lscr.io/linuxserver/sonarr:4.0.16@sha256:60e5edcac39172294ad22d55d1b08c2c0a9fe658cad2f2c4d742ae017d7874de
     environment:
       - PUID=${PUID?error}
       - PGID=${PGID?error}
@@ -70,7 +70,7 @@ services:
       test: curl -f http://localhost:8989/ping || exit 1
 
   lidarr:
-    image: lscr.io/linuxserver/lidarr@sha256:ede2bb17350cc97a0d3f24389aa91803f655eac29aa022c77a71f4a61cc621e4
+    image: lscr.io/linuxserver/lidarr:3.1.0@sha256:ede2bb17350cc97a0d3f24389aa91803f655eac29aa022c77a71f4a61cc621e4
     environment:
       - PUID=${PUID?error}
       - PGID=${PGID?error}
@@ -89,7 +89,7 @@ services:
       test: curl -f http://localhost:8686/ping || exit 1
 
   navidrome:
-    image: deluan/navidrome@sha256:4edc8a1de3e042f30b78a478325839f4395177eb8201c27543dccc0eba674f23
+    image: deluan/navidrome:0.59.0@sha256:4edc8a1de3e042f30b78a478325839f4395177eb8201c27543dccc0eba674f23
     volumes:
       - "/mnt/cephfs/navidrome-data:/data"
       - "media_music:/music:ro"
