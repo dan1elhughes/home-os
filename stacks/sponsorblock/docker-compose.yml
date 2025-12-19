@@ -1,7 +1,7 @@
 ---
 services:
   sponsorblock:
-    image: ghcr.io/dmunozv04/isponsorblocktv:2.6.1
+    image: ghcr.io/dmunozv04/isponsorblocktv:v2.6.1
     volumes:
       - "/mnt/cephfs/sponsorblock:/app/data"
 
