@@ -70,7 +70,7 @@ services:
       test: curl -f http://localhost:8989/ping || exit 1
 
   lidarr:
-    image: lscr.io/linuxserver/lidarr:3.1.0
+    image: lscr.io/linuxserver/lidarr:8.1.2135
     environment:
       - PUID=${PUID?error}
       - PGID=${PGID?error}
