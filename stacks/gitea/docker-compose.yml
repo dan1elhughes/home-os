@@ -1,0 +1,32 @@
+services:
+  gitea:
+    image: docker.gitea.com/gitea@sha256:fee0e5e55da6d2d11186bf39023a772fe63d9deffc0a83283e3d8e5d11c2716a
+    environment:
+      - USER_UID=${PUID?error}
+      - USER_GID=${PGID?error}
+      - GITEA__database__DB_TYPE=postgres
+      - GITEA__database__HOST=db:5432
+      - GITEA__database__NAME=gitea
+      - GITEA__database__USER=gitea
+      - GITEA__database__PASSWD=gitea
+    volumes:
+      - "/mnt/cephfs/gitea-config:/data"
+      - "/etc/timezone:/etc/timezone:ro"
+      - "/etc/localtime:/etc/localtime:ro"
+    depends_on:
+      - db
+
+  db:
+    image: postgres@sha256:38d5c9d522037d8bf0864c9068e4df2f8a60127c6489ab06f98fdeda535560f9
+    user: "${PUID?error}:${PGID?error}"
+    environment:
+      - POSTGRES_USER=gitea
+      - POSTGRES_PASSWORD=gitea
+      - POSTGRES_DB=gitea
+    volumes:
+      - "/mnt/cephfs/gitea-db:/var/lib/postgresql"
+
+networks:
+  default:
+    external: true
+    name: main
