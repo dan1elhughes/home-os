@@ -5,7 +5,9 @@
       - ca-certificates
       - curl
       - gnupg
+      - lm-sensors
       - lsb-release
+      - sysstat
     state: present
 
 - name: Create keyrings directory
@@ -77,3 +79,15 @@
     name: docker-prune.timer
     enabled: true
     state: started
+
+- name: Create Netdata directories
+  file:
+    path: "/opt/netdata/{{ item }}"
+    state: directory
+    owner: 201 # Hardcoded 'netdata' user ID
+    group: 201 # Hardcoded 'netdata' group ID
+    mode: "0755"
+  loop:
+    - config
+    - lib
+    - cache
