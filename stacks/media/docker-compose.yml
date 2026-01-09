@@ -94,6 +94,25 @@ services:
       - "/mnt/cephfs/navidrome-data:/data"
       - "media_music:/music:ro"
 
+  swiparr:
+    image: ghcr.io/m3sserstudi0s/swiparr:latest
+    environment:
+      - PUID=${PUID?error}
+      - PGID=${PGID?error}
+      - TZ=${TZ?error}
+      - JELLYFIN_URL=http://10.10.10.60:8096
+      - JELLYFIN_PUBLIC_URL=https://jellyfin.danhughes.dev
+    volumes:
+      - "/mnt/cephfs/swiparr:/app/data"
+    deploy:
+      labels:
+        - homepage.group=Media
+        - homepage.name=Swiparr
+        - homepage.icon=swiparr
+        - homepage.href=https://swiparr.danhughes.dev
+    healthcheck:
+      test: curl -f http://localhost:4321/ || exit 1
+
 volumes:
   downloads:
     driver_opts:
