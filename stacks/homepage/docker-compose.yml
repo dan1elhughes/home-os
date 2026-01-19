@@ -1,6 +1,6 @@
 services:
   homepage:
-    image: ghcr.io/gethomepage/homepage:v1.8.0
+    image: ghcr.io/gethomepage/homepage:v1.9.0
     environment:
       - PUID=${PUID?error}
       - PGID=${PGID?error}
