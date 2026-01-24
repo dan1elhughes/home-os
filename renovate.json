@@ -1,6 +1,13 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": [
-    "config:recommended"
+  "extends": ["config:recommended"],
+  // Lidarr Docker tags include a legacy `0.8.1.2135` tag.
+  // Renovate misinterprets this as `8.1.2135`, which appears newer than v3.x.
+  // This explicitly blocks that tag to prevent incorrect upgrade PRs.
+  "packageRules": [
+    {
+      "matchPackageNames": ["linuxserver/lidarr"],
+      "excludeVersions": ["8.1.2135"]
+    }
   ]
 }
