@@ -6,7 +6,7 @@
   // This explicitly blocks that tag to prevent incorrect upgrade PRs.
   "packageRules": [
     {
-      "matchPackageNames": ["linuxserver/lidarr"],
+      "matchPackageNames": ["lscr.io/linuxserver/lidarr"],
       "excludeVersions": ["8.1.2135"]
     }
   ]
