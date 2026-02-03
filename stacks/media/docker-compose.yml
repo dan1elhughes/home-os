@@ -89,7 +89,7 @@ services:
       test: curl -f http://localhost:8686/ping || exit 1
 
   navidrome:
-    image: deluan/navidrome:0.59.0
+    image: deluan/navidrome:0.60.0
     volumes:
       - "/mnt/cephfs/navidrome-data:/data"
       - "media_music:/music:ro"
