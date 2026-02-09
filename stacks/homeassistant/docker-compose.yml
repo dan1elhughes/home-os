@@ -18,7 +18,7 @@ services:
       - /mnt/cephfs/mosquitto:/mosquitto
 
   homeassistant:
-    image: lscr.io/linuxserver/homeassistant:2026.2.0
+    image: lscr.io/linuxserver/homeassistant:2026.2.1
     environment:
       - PUID=${PUID?error}
       - PGID=${PGID?error}
