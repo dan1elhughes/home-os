@@ -1,6 +1,6 @@
 services:
   transmission:
-    image: lscr.io/linuxserver/transmission:4.0.6
+    image: lscr.io/linuxserver/transmission:4.1.0
     environment:
       - PUID=${PUID?error}
       - PGID=${PGID?error}
