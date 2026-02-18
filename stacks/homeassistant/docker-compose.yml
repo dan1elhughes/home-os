@@ -16,6 +16,14 @@ services:
       - 1883:1883
     volumes:
       - /mnt/cephfs/mosquitto:/mosquitto
+    environment:
+      - MQTT_PASSWORD=${MQTT_PASSWORD}
+    healthcheck:
+      test: ["CMD-SHELL", "mosquitto_pub -h localhost -t health/check -m ping -u DVES_USER -P $$MQTT_PASSWORD"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
 
   homeassistant:
     image: lscr.io/linuxserver/homeassistant:2026.2.2

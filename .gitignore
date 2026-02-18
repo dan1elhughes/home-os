@@ -2,3 +2,4 @@
 **/vars/main.yml
 
 .DS_Store
+.env
