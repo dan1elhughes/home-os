@@ -9,7 +9,6 @@ services:
       POLL_CONFIG: |
         - url: https://github.com/dan1elhughes/home-os.git
           reference: refs/heads/master
-          interval: 1200
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - /mnt/cephfs/doco-cd-data:/data
