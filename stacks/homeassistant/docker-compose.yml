@@ -26,7 +26,7 @@ services:
       start_period: 10s
 
   homeassistant:
-    image: lscr.io/linuxserver/homeassistant:2026.2.2
+    image: lscr.io/linuxserver/homeassistant:2026.2.3
     environment:
       - PUID=${PUID?error}
       - PGID=${PGID?error}
