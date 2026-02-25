@@ -1,0 +1,22 @@
+services:
+  doco-cd:
+    image: ghcr.io/kimdre/doco-cd:latest
+    restart: unless-stopped
+    environment:
+      TZ: ${TZ?error}
+      GIT_ACCESS_TOKEN: ${DOCO_CD_GIT_ACCESS_TOKEN?error}
+      POLL_CONFIG: |
+        - url: https://github.com/dan1elhughes/home-os.git
+          reference: refs/heads/master
+          interval: 1200
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /mnt/cephfs/doco-cd-data:/data
+    deploy:
+      placement:
+        constraints: [node.role == manager]
+
+networks:
+  default:
+    external: true
+    name: main

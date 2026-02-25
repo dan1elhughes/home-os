@@ -1,0 +1,6 @@
+working_dir: stacks/
+auto_discover: true
+auto_discover_opts:
+  depth: 1
+env_files:
+  - stacks/.env
