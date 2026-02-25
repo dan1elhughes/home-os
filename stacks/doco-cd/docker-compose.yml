@@ -4,6 +4,8 @@ services:
     environment:
       TZ: ${TZ?error}
       GIT_ACCESS_TOKEN: ${DOCO_CD_GIT_ACCESS_TOKEN?error}
+      APPRISE_API_URL: http://apprise:8000/notify/3500643eb9f31f99c97b71c6019996194ff58986c849293c1b9d540c6f14116e
+      APPRISE_NOTIFY_LEVEL: success
       POLL_CONFIG: |
         - url: https://github.com/dan1elhughes/home-os.git
           reference: refs/heads/master
