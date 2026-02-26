@@ -9,6 +9,15 @@ services:
     volumes:
       - "/mnt/cephfs/apprise-config:/config"
       - "/mnt/cephfs/apprise-attachments:/attachments"
+    deploy:
+      labels:
+        - "traefik.enable=true"
+        - "traefik.http.routers.apprise.rule=Host(`apprise.danhughes.dev`)"
+        - "traefik.http.routers.apprise.entrypoints=websecure"
+        - "traefik.http.routers.apprise.tls=true"
+        - "traefik.http.routers.apprise.tls.certResolver=letsencrypt"
+        - "traefik.http.services.apprise.loadbalancer.server.port=8000"
+        - "traefik.swarm.network=main"
 
 networks:
   default:

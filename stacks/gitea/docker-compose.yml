@@ -15,6 +15,15 @@ services:
       - "/etc/localtime:/etc/localtime:ro"
     depends_on:
       - db
+    deploy:
+      labels:
+        - "traefik.enable=true"
+        - "traefik.http.routers.gitea.rule=Host(`gitea.danhughes.dev`)"
+        - "traefik.http.routers.gitea.entrypoints=websecure"
+        - "traefik.http.routers.gitea.tls=true"
+        - "traefik.http.routers.gitea.tls.certResolver=letsencrypt"
+        - "traefik.http.services.gitea.loadbalancer.server.port=3000"
+        - "traefik.swarm.network=main"
 
   db:
     image: postgres:18.2

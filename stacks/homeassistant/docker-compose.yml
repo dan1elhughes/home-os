@@ -32,6 +32,13 @@ services:
       - mosquitto
     deploy:
       labels:
+        - "traefik.enable=true"
+        - "traefik.http.routers.homeassistant.rule=Host(`home.danhughes.dev`)"
+        - "traefik.http.routers.homeassistant.entrypoints=websecure"
+        - "traefik.http.routers.homeassistant.tls=true"
+        - "traefik.http.routers.homeassistant.tls.certResolver=letsencrypt"
+        - "traefik.http.services.homeassistant.loadbalancer.server.port=8123"
+        - "traefik.swarm.network=main"
 
 networks:
   default:

@@ -7,6 +7,15 @@ services:
     volumes:
       - "/mnt/cephfs/transmission:/config"
       - "downloads:/downloads"
+    deploy:
+      labels:
+        - "traefik.enable=true"
+        - "traefik.http.routers.transmission.rule=Host(`transmission.danhughes.dev`)"
+        - "traefik.http.routers.transmission.entrypoints=websecure"
+        - "traefik.http.routers.transmission.tls=true"
+        - "traefik.http.routers.transmission.tls.certResolver=letsencrypt"
+        - "traefik.http.services.transmission.loadbalancer.server.port=9091"
+        - "traefik.swarm.network=main"
 
   prowlarr:
     image: lscr.io/linuxserver/prowlarr:2.3.0
@@ -18,6 +27,15 @@ services:
       - "/mnt/cephfs/prowlarr-config:/config"
     healthcheck:
       test: curl -f http://localhost:9696/ping || exit 1
+    deploy:
+      labels:
+        - "traefik.enable=true"
+        - "traefik.http.routers.prowlarr.rule=Host(`prowlarr.danhughes.dev`)"
+        - "traefik.http.routers.prowlarr.entrypoints=websecure"
+        - "traefik.http.routers.prowlarr.tls=true"
+        - "traefik.http.routers.prowlarr.tls.certResolver=letsencrypt"
+        - "traefik.http.services.prowlarr.loadbalancer.server.port=9696"
+        - "traefik.swarm.network=main"
 
   radarr:
     image: lscr.io/linuxserver/radarr:6.0.4
@@ -31,6 +49,15 @@ services:
       - "media_movies:/movies"
     healthcheck:
       test: curl -f http://localhost:7878/ping || exit 1
+    deploy:
+      labels:
+        - "traefik.enable=true"
+        - "traefik.http.routers.radarr.rule=Host(`radarr.danhughes.dev`)"
+        - "traefik.http.routers.radarr.entrypoints=websecure"
+        - "traefik.http.routers.radarr.tls=true"
+        - "traefik.http.routers.radarr.tls.certResolver=letsencrypt"
+        - "traefik.http.services.radarr.loadbalancer.server.port=7878"
+        - "traefik.swarm.network=main"
 
   sonarr:
     image: lscr.io/linuxserver/sonarr:4.0.16
@@ -44,6 +71,15 @@ services:
       - "media_tv:/tv"
     healthcheck:
       test: curl -f http://localhost:8989/ping || exit 1
+    deploy:
+      labels:
+        - "traefik.enable=true"
+        - "traefik.http.routers.sonarr.rule=Host(`sonarr.danhughes.dev`)"
+        - "traefik.http.routers.sonarr.entrypoints=websecure"
+        - "traefik.http.routers.sonarr.tls=true"
+        - "traefik.http.routers.sonarr.tls.certResolver=letsencrypt"
+        - "traefik.http.services.sonarr.loadbalancer.server.port=8989"
+        - "traefik.swarm.network=main"
 
   lidarr:
     image: lscr.io/linuxserver/lidarr:3.1.0
@@ -57,6 +93,15 @@ services:
       - "media_music:/music"
     healthcheck:
       test: curl -f http://localhost:8686/ping || exit 1
+    deploy:
+      labels:
+        - "traefik.enable=true"
+        - "traefik.http.routers.lidarr.rule=Host(`lidarr.danhughes.dev`)"
+        - "traefik.http.routers.lidarr.entrypoints=websecure"
+        - "traefik.http.routers.lidarr.tls=true"
+        - "traefik.http.routers.lidarr.tls.certResolver=letsencrypt"
+        - "traefik.http.services.lidarr.loadbalancer.server.port=8686"
+        - "traefik.swarm.network=main"
 
   swiparr:
     image: ghcr.io/m3sserstudi0s/swiparr:1.2.12
@@ -70,6 +115,15 @@ services:
       - "/mnt/cephfs/swiparr:/app/data"
     healthcheck:
       test: curl -f http://localhost:4321/ || exit 1
+    deploy:
+      labels:
+        - "traefik.enable=true"
+        - "traefik.http.routers.swiparr.rule=Host(`swiparr.danhughes.dev`)"
+        - "traefik.http.routers.swiparr.entrypoints=websecure"
+        - "traefik.http.routers.swiparr.tls=true"
+        - "traefik.http.routers.swiparr.tls.certResolver=letsencrypt"
+        - "traefik.http.services.swiparr.loadbalancer.server.port=4321"
+        - "traefik.swarm.network=main"
 
 volumes:
   downloads:

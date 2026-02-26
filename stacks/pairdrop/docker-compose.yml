@@ -7,6 +7,15 @@ services:
       - PGID=${PGID?error}
       - TZ=${TZ?error}
       - WS_FALLBACK=true #optional
+    deploy:
+      labels:
+        - "traefik.enable=true"
+        - "traefik.http.routers.pairdrop.rule=Host(`pairdrop.danhughes.dev`)"
+        - "traefik.http.routers.pairdrop.entrypoints=websecure"
+        - "traefik.http.routers.pairdrop.tls=true"
+        - "traefik.http.routers.pairdrop.tls.certResolver=letsencrypt"
+        - "traefik.http.services.pairdrop.loadbalancer.server.port=3000"
+        - "traefik.swarm.network=main"
 
 networks:
   default:
