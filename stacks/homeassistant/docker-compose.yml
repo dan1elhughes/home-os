@@ -3,12 +3,6 @@ services:
     image: ghcr.io/tasmoadmin/tasmoadmin:v4.3.4
     volumes:
       - "/mnt/cephfs/tasmoadmin-config:/data"
-    deploy:
-      labels:
-        - homepage.group=Home
-        - homepage.name=Tasmoadmin
-        - homepage.icon=tasmoadmin
-        - homepage.href=https://tasmoadmin.danhughes.dev
 
   mosquitto:
     image: eclipse-mosquitto:2.0.22
@@ -38,10 +32,6 @@ services:
       - mosquitto
     deploy:
       labels:
-        - homepage.group=Home
-        - homepage.name=Home Assistant
-        - homepage.icon=home-assistant
-        - homepage.href=https://home.danhughes.dev
 
 networks:
   default:

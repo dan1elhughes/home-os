@@ -9,12 +9,6 @@ services:
     volumes:
       - "/mnt/cephfs/apprise-config:/config"
       - "/mnt/cephfs/apprise-attachments:/attachments"
-    deploy:
-      labels:
-        - homepage.group=Core
-        - homepage.name=Apprise
-        - homepage.icon=apprise
-        - homepage.href=https://apprise.danhughes.dev
 
 networks:
   default:

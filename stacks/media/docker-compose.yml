@@ -7,12 +7,6 @@ services:
     volumes:
       - "/mnt/cephfs/transmission:/config"
       - "downloads:/downloads"
-    deploy:
-      labels:
-        - homepage.group=Media
-        - homepage.name=Transmission
-        - homepage.icon=transmission
-        - homepage.href=https://transmission.danhughes.dev
 
   prowlarr:
     image: lscr.io/linuxserver/prowlarr:2.3.0
@@ -22,12 +16,6 @@ services:
       - TZ=${TZ?error}
     volumes:
       - "/mnt/cephfs/prowlarr-config:/config"
-    deploy:
-      labels:
-        - homepage.group=Media
-        - homepage.name=Prowlarr
-        - homepage.icon=prowlarr
-        - homepage.href=https://prowlarr.danhughes.dev
     healthcheck:
       test: curl -f http://localhost:9696/ping || exit 1
 
@@ -41,12 +29,6 @@ services:
       - "/mnt/cephfs/radarr-config:/config"
       - "downloads_complete:/downloads/complete"
       - "media_movies:/movies"
-    deploy:
-      labels:
-        - homepage.group=Media
-        - homepage.name=Radarr
-        - homepage.icon=radarr
-        - homepage.href=https://radarr.danhughes.dev
     healthcheck:
       test: curl -f http://localhost:7878/ping || exit 1
 
@@ -60,12 +42,6 @@ services:
       - "/mnt/cephfs/sonarr-config:/config"
       - "downloads_complete:/downloads/complete"
       - "media_tv:/tv"
-    deploy:
-      labels:
-        - homepage.group=Media
-        - homepage.name=Sonarr
-        - homepage.icon=sonarr
-        - homepage.href=https://sonarr.danhughes.dev
     healthcheck:
       test: curl -f http://localhost:8989/ping || exit 1
 
@@ -79,12 +55,6 @@ services:
       - "/mnt/cephfs/lidarr-config:/config"
       - "downloads_complete:/downloads/complete"
       - "media_music:/music"
-    deploy:
-      labels:
-        - homepage.group=Media
-        - homepage.name=Lidarr
-        - homepage.icon=Lidarr
-        - homepage.href=https://lidarr.danhughes.dev
     healthcheck:
       test: curl -f http://localhost:8686/ping || exit 1
 
@@ -98,12 +68,6 @@ services:
       - JELLYFIN_PUBLIC_URL=https://jellyfin.danhughes.dev
     volumes:
       - "/mnt/cephfs/swiparr:/app/data"
-    deploy:
-      labels:
-        - homepage.group=Media
-        - homepage.name=Swiparr
-        - homepage.icon=swiparr
-        - homepage.href=https://swiparr.danhughes.dev
     healthcheck:
       test: curl -f http://localhost:4321/ || exit 1
 
