@@ -89,7 +89,7 @@ services:
       test: curl -f http://localhost:8686/ping || exit 1
 
   swiparr:
-    image: ghcr.io/m3sserstudi0s/swiparr:1.2.4
+    image: ghcr.io/m3sserstudi0s/swiparr:1.2.12
     environment:
       - PUID=${PUID?error}
       - PGID=${PGID?error}
