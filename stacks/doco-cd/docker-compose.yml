@@ -1,6 +1,7 @@
 services:
   doco-cd:
     image: ghcr.io/kimdre/doco-cd:0.68.0
+    user: "1000:1000"
     environment:
       TZ: ${TZ?error}
       GIT_ACCESS_TOKEN: ${DOCO_CD_GIT_ACCESS_TOKEN?error}
