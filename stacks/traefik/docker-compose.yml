@@ -1,0 +1,34 @@
+services:
+  traefik:
+    image: traefik:v3.1
+    command:
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
+      - "--entrypoints.websecure.http.tls=true"
+
+      - "--api.insecure=true"
+      - "--providers.swarm=true"
+      - "--providers.swarm.endpoint=unix:///var/run/docker.sock"
+      - "--providers.swarm.exposedbydefault=false"
+      - "--providers.swarm.network=main"
+      - "--certificatesresolvers.letsencrypt.acme.dnschallenge=true"
+      - "--certificatesresolvers.letsencrypt.acme.dnschallenge.provider=cloudflare"
+      - "--certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json"
+    ports:
+      - "8080:8080"
+      - "80:80"
+      - "443:443"
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+      - "/mnt/cephfs/traefik-config:/etc/traefik"
+      - "/mnt/cephfs/traefik-config-letsencrypt:/letsencrypt"
+    environment:
+      - CF_DNS_API_TOKEN=${CF_API_TOKEN}
+    deploy:
+      placement:
+        constraints: [node.role == manager]
+
+networks:
+  default:
+    external: true
+    name: main
