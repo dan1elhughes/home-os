@@ -1,0 +1,24 @@
+services:
+  truenas-proxy:
+    image: caddy:2.11.1-alpine
+    command: >
+      caddy reverse-proxy --from :80 --to https://10.10.10.60:443 --insecure
+      --header-up "X-Forwarded-Proto: https"
+      --header-up "Host: truenas.danhughes.dev"
+      --header-up "X-Forwarded-Host: truenas.danhughes.dev"
+    deploy:
+      labels:
+        - "traefik.enable=true"
+
+        - "traefik.http.routers.truenas.rule=Host(`truenas.danhughes.dev`)"
+        - "traefik.http.routers.truenas.entrypoints=websecure"
+        - "traefik.http.routers.truenas.tls=true"
+        - "traefik.http.routers.truenas.tls.certResolver=letsencrypt"
+
+        - "traefik.http.services.truenas.loadbalancer.server.port=80"
+        - "traefik.swarm.network=main"
+
+networks:
+  default:
+    external: true
+    name: main
