@@ -1,6 +1,6 @@
 services:
   truenas-proxy:
-    image: caddy:2.11.1-alpine
+    image: caddy:2.11.2-alpine
     command: >
       caddy reverse-proxy --from :80 --to https://10.10.10.60:443 --insecure
       --header-up "X-Forwarded-Proto: https"

@@ -1,6 +1,6 @@
 services:
   jellyfin-proxy:
-    image: caddy:2.11.1-alpine
+    image: caddy:2.11.2-alpine
     command: caddy reverse-proxy --from :80 --to http://10.10.10.60:8096
     deploy:
       labels:
