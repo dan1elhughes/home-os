@@ -3,6 +3,15 @@ services:
     image: ghcr.io/tasmoadmin/tasmoadmin:v4.3.4
     volumes:
       - "/mnt/cephfs/tasmoadmin-config:/data"
+    deploy:
+      labels:
+        - "traefik.enable=true"
+        - "traefik.http.routers.tasmoadmin.rule=Host(`tasmoadmin.danhughes.dev`)"
+        - "traefik.http.routers.tasmoadmin.entrypoints=websecure"
+        - "traefik.http.routers.tasmoadmin.tls=true"
+        - "traefik.http.routers.tasmoadmin.tls.certResolver=letsencrypt"
+        - "traefik.http.services.tasmoadmin.loadbalancer.server.port=9541"
+        - "traefik.swarm.network=main"
 
   mosquitto:
     image: eclipse-mosquitto:2.0.22
