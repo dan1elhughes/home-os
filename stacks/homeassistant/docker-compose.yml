@@ -28,6 +28,26 @@ services:
       retries: 3
       start_period: 10s
 
+  trmnl-ha:
+    image: ghcr.io/usetrmnl/trmnl-ha-amd64:0.7.0
+    volumes:
+      - /mnt/cephfs/trmnl:/data
+    environment:
+      - HOME_ASSISTANT_URL=http://homeassistant:8123
+      - ACCESS_TOKEN=${TRMNL_ACCESS_TOKEN?error}
+      - TZ=${TZ?error}
+    ports:
+      - 10000:10000
+    deploy:
+      labels:
+        - "traefik.enable=true"
+        - "traefik.http.routers.trmnl-ha.rule=Host(`trmnl.danhughes.dev`)"
+        - "traefik.http.routers.trmnl-ha.entrypoints=websecure"
+        - "traefik.http.routers.trmnl-ha.tls=true"
+        - "traefik.http.routers.trmnl-ha.tls.certResolver=letsencrypt"
+        - "traefik.http.services.trmnl-ha.loadbalancer.server.port=10000"
+        - "traefik.swarm.network=main"
+
   homeassistant:
     image: lscr.io/linuxserver/homeassistant:2026.3.4
     environment:
