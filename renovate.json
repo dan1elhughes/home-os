@@ -5,7 +5,7 @@
   "pruneStaleBranches": true,
   "recreateClosed": true,
   "dependencyDashboard": false,
-  "fetchChangeLogs": "false",
+  "fetchChangeLogs": "off",
   "toolSettings": {
     "nodeMaxMemory": 4096
   },
