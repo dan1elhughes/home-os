@@ -31,7 +31,7 @@ services:
         - "traefik.http.services.renovate.loadbalancer.server.port=8080"
         - "traefik.swarm.network=main"
         - "swarm.cronjob.enable=true"
-        - "swarm.cronjob.schedule=*/5 * * * *"
+        - "swarm.cronjob.schedule=0 * * * *"
         - "swarm.cronjob.skip-running=true"
         - "swarm.cronjob.replicas=1"
 
