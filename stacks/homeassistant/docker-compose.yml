@@ -49,7 +49,7 @@ services:
         - "traefik.swarm.network=main"
 
   homeassistant:
-    image: lscr.io/linuxserver/homeassistant:2026.3.4
+    image: lscr.io/linuxserver/homeassistant:2026.4.0
     environment:
       - PUID=${PUID?error}
       - PGID=${PGID?error}
