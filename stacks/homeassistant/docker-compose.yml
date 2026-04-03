@@ -22,7 +22,11 @@ services:
     environment:
       - MQTT_PASSWORD=${MQTT_PASSWORD}
     healthcheck:
-      test: ["CMD-SHELL", "mosquitto_pub -h localhost -t health/check -m ping -u DVES_USER -P $$MQTT_PASSWORD"]
+      test:
+        [
+          "CMD-SHELL",
+          "mosquitto_pub -h localhost -t health/check -m ping -u DVES_USER -P $$MQTT_PASSWORD",
+        ]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -49,7 +53,7 @@ services:
         - "traefik.swarm.network=main"
 
   homeassistant:
-    image: lscr.io/linuxserver/homeassistant:2026.4.0
+    image: ghcr.io/linuxserver/homeassistant:2026.4.0
     environment:
       - PUID=${PUID?error}
       - PGID=${PGID?error}

@@ -14,7 +14,7 @@
   // This explicitly blocks that tag to prevent incorrect upgrade PRs.
   "packageRules": [
     {
-      "matchPackageNames": ["lscr.io/linuxserver/lidarr"],
+      "matchPackageNames": ["ghcr.io/linuxserver/lidarr"],
       "allowedVersions": "!/^8\\.1\\.2135$/"
     }
   ]
