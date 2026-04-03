@@ -5,7 +5,7 @@
   "pruneStaleBranches": true,
   "recreateClosed": true,
   "toolSettings": {
-    "nodeMaxMemory": "4096"
+    "nodeMaxMemory": 4096
   },
   // Lidarr Docker tags include a legacy `0.8.1.2135` tag.
   // Renovate misinterprets this as `8.1.2135`, which appears newer than v3.x.
