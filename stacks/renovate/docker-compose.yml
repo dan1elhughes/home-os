@@ -1,0 +1,41 @@
+services:
+  swarm-cronjob:
+    image: crazymax/swarm-cronjob:1
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - TZ=${TZ?error}
+
+  renovate:
+    image: ghcr.io/renovatebot/renovate:43.104.1
+    environment:
+      - RENOVATE_GIT_AUTHOR=Renovate Bot <renovate[bot]@users.noreply.github.com>
+      - RENOVATE_TOKEN=${RENOVATE_GIT_ACCESS_TOKEN?error}
+      - RENOVATE_AUTODISCOVER=false
+      - RENOVATE_PLATFORM=github
+      - RENOVATE_REPOSITORIES=dan1elhughes/home-os
+      - RENOVATE_NODE_OPTIONS=--max-old-space-size=8192
+      - PUID=${PUID?error}
+      - PGID=${PGID?error}
+      - TZ=${TZ?error}
+    deploy:
+      replicas: 0
+      restart_policy:
+        condition: none
+      labels:
+        - "traefik.enable=true"
+        - "traefik.http.routers.renovate.rule=Host(`renovate.danhughes.dev`)"
+        - "traefik.http.routers.renovate.entrypoints=websecure"
+        - "traefik.http.routers.renovate.tls=true"
+        - "traefik.http.routers.renovate.tls.certResolver=letsencrypt"
+        - "traefik.http.services.renovate.loadbalancer.server.port=8080"
+        - "traefik.swarm.network=main"
+        - "swarm.cronjob.enable=true"
+        - "swarm.cronjob.schedule=*/5 * * * *"
+        - "swarm.cronjob.skip-running=true"
+        - "swarm.cronjob.replicas=1"
+
+networks:
+  default:
+    external: true
+    name: main
