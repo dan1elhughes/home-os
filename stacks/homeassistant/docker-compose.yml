@@ -53,7 +53,7 @@ services:
         - "traefik.swarm.network=main"
 
   homeassistant:
-    image: ghcr.io/linuxserver/homeassistant:2026.5.3
+    image: ghcr.io/linuxserver/homeassistant:2026.5.4
     environment:
       - PUID=${PUID?error}
       - PGID=${PGID?error}
