@@ -1,5 +1,2 @@
-/group_vars/*.yml
-**/vars/main.yml
-
 .DS_Store
 .env

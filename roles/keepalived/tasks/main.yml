@@ -1,3 +1,11 @@
+- name: Ensure keepalived_password is set
+  fail:
+    msg: >
+      KEEPALIVED_PASSWORD environment variable is not set.
+      Run: op run --environment q5pfvfpsh44h7xywiqys2ff5ma --account=BMVXTKJWJNHKDFO36EZROR44HM --
+      ansible-playbook playbook.yml --tags keepalived
+  when: keepalived_password | length == 0
+
 - name: Install keepalived
   apt:
     name:
