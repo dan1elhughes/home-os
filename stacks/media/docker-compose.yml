@@ -1,6 +1,6 @@
 services:
   transmission:
-    image: ghcr.io/linuxserver/transmission:4.1.1
+    image: ghcr.io/linuxserver/transmission:4.1.2
     environment:
       - PUID=${PUID?error}
       - PGID=${PGID?error}
