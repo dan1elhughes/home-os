@@ -12,9 +12,11 @@ deploy_stack() {
     fi
 }
 
-# Check if a CLI argument is passed
-if [ "$1" ]; then
-    deploy_stack "$1"
+# If CLI arguments are passed, deploy each one
+if [ $# -gt 0 ]; then
+    for stack in "$@"; do
+        deploy_stack "$stack"
+    done
 else
     # For each directory, deploy the stack
     for dir in $(ls -d */); do
