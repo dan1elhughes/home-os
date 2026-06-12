@@ -18,7 +18,7 @@ services:
         - "traefik.swarm.network=main"
 
   prowlarr:
-    image: ghcr.io/linuxserver/prowlarr:2.3.5
+    image: ghcr.io/linuxserver/prowlarr:2.4.0
     environment:
       - PUID=${PUID?error}
       - PGID=${PGID?error}
