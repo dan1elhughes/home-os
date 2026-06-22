@@ -7,7 +7,7 @@ services:
       - TZ=${TZ?error}
 
   renovate:
-    image: ghcr.io/renovatebot/renovate:43.202.1
+    image: ghcr.io/renovatebot/renovate:43.232.1
     environment:
       - RENOVATE_GIT_AUTHOR=Renovate Bot <renovate[bot]@users.noreply.github.com>
       - RENOVATE_TOKEN=${RENOVATE_GIT_ACCESS_TOKEN?error}
