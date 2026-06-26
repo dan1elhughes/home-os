@@ -1,0 +1,152 @@
+# ------------------------------------------------------------------
+# Predbat config for home-os (MONITOR / FORECAST ONLY)
+#
+# Hardware: Enphase Envoy + 3x Encharge (15 kWh) + Octopus Energy tariff.
+# Predbat cannot natively control Enphase/EcoFlow, so this runs read-only:
+# it reads load/PV/import/export + Octopus rates and produces a plan and
+# cost forecast, but issues NO control commands. The existing
+# unified_battery_schedule automations remain in charge of the battery.
+#
+# This file is delivered into the container as a Docker Swarm config
+# (see ../docker-compose.yml). The HA token is injected separately from
+# 1Password into /config/secrets.yaml and referenced via !secret.
+# ------------------------------------------------------------------
+---
+pred_bat:
+  module: predbat
+  class: PredBat
+
+  prefix: predbat
+
+  # Standalone in Docker, talking to HA over its API on the swarm network.
+  ha_url: 'http://homeassistant:8123'
+  ha_key: !secret ha_key
+
+  timezone: Europe/London
+  currency_symbols:
+    - '£'
+    - 'p'
+  threads: auto
+
+  # Predbat computes a full charge/discharge PLAN but never actuates the
+  # battery -- our own HA automation reads the plan and applies it to Enphase.
+  #   - "Control charge & discharge" makes Predbat calculate best charge AND
+  #     export windows. (Monitor mode sets calculate_best_charge=False and
+  #     produces NO schedule, which is useless to us.)
+  #   - set_read_only: True makes the execute phase skip every inverter write
+  #     (execute.py short-circuits on set_read_only), so Predbat commands
+  #     nothing.
+  #   - The ENPHASE inverter also has has_service_api/REST/MQTT all off, so
+  #     there is no actuation path even if read-only were disabled.
+  # Net: a real plan lands in predbat.best_charge_*/best_export_*/plan_html.
+  #
+  # NB control mode fires many concurrent HA history queries. This previously
+  # corrupted the SQLite-on-cephfs recorder; the recorder now runs on Postgres
+  # (see ../docker-compose.yml + home-assistant repo recorder.yaml), which
+  # handles that load.
+  mode: 'Control charge & discharge'
+  set_read_only: True
+
+  # --- Energy counters (daily kWh, reset at midnight) -----------------
+  # House load + PV from the Envoy CT clamps.
+  load_today:
+    - sensor.envoy_122322027694_energy_consumption_today
+  pv_today:
+    - sensor.envoy_122322027694_energy_production_today
+  # Grid import/export from the myenergi hub (clean daily counters).
+  import_today:
+    - sensor.myenergi_myenergi_hub_grid_import_today
+  export_today:
+    - sensor.myenergi_myenergi_hub_grid_export_today
+
+  # --- Battery state --------------------------------------------------
+  num_inverters: 1
+
+  # Custom "unsupported inverter" definition. Enphase/EcoFlow have no Predbat
+  # control driver, so we declare a type with every control capability off.
+  # This stops Predbat expecting GivEnergy charge-window entities (which would
+  # otherwise raise "unable to read charge window time"); it auto-creates
+  # dummy entities instead. With no service_api, Predbat tracks charge state
+  # internally and never tries to command the battery -- exactly what Monitor
+  # mode needs.
+  inverter_type: ENPHASE
+  inverter:
+    name: "ENPHASE"
+    has_rest_api: False
+    has_mqtt_api: False
+    has_service_api: False
+    output_charge_control: "none"
+    charge_control_immediate: False
+    has_charge_enable_time: False
+    has_discharge_enable_time: False
+    has_target_soc: False
+    has_reserve_soc: False
+    has_timed_pause: False
+    time_button_press: False
+    support_charge_freeze: False
+    support_discharge_freeze: False
+    has_ge_inverter_mode: False
+    has_fox_inverter_mode: False
+    has_idle_time: False
+    has_time_window: False
+    charge_time_format: "H:M-H:M"
+    charge_time_entity_is_option: False
+    can_span_midnight: False
+    clock_time_format: "%Y-%m-%d %H:%M:%S"
+    num_load_entities: 1
+    soc_units: "%"
+    write_and_poll_sleep: 2
+
+  # Battery state of charge. We feed SOC as a percentage and let Predbat
+  # derive kWh from soc_max -- cleaner than the Envoy's available-energy
+  # sensor, which reports Wh and would need scaling. (soc_kw is read with
+  # required_unit=kWh so it would auto-convert, but soc_max is NOT, so we set
+  # capacity as a literal kWh below to avoid the Wh-as-kWh trap.)
+  soc_percent:
+    - sensor.envoy_122322027694_battery
+  # Total usable capacity in kWh (literal -- 3x Encharge ~= 15 kWh). Do NOT
+  # point this at the Envoy Wh sensor: soc_max has no unit conversion and 15000
+  # would be read as 15000 kWh.
+  soc_max:
+    - 15.0
+
+  # Live power flows. The Envoy can't see the car and its consumption CT nets
+  # the battery, so we feed Predbat DERIVED sensors (see home-assistant repo
+  # template.yaml): pure house load and true grid (Zappi). Predbat models the
+  # car (Octopus Intelligent) and battery separately.
+  pv_power:
+    - sensor.solar_power_generation
+  load_power:
+    - sensor.predbat_house_load_power
+  grid_power:
+    - sensor.predbat_grid_power
+  battery_power:
+    - sensor.battery_total_power
+
+  # --- Inverter physical limits ---------------------------------------
+  # 3x Encharge ~ 15 kWh usable; ~9.6 kW combined (matches battery_power_rate_kw).
+  # battery_rate_max is the key Predbat reads for a non-REST custom inverter;
+  # battery_rate_max_charge/discharge are NOT read on this path. Watts.
+  inverter_limit: 9600
+  battery_rate_max: 9600
+  inverter_battery_rate_min: 100
+
+  reserve: 0
+  battery_loss: 0.95
+  battery_loss_discharge: 0.95
+  inverter_loss: 0.97
+
+  # --- Octopus Energy rates (BottlecapDave integration) ---------------
+  # Predbat wants the *_current_rate sensors here; it auto-discovers the
+  # matching *_current_day_rates event entities for the full forecast.
+  metric_octopus_import: 'sensor.octopus_energy_electricity_15p0706167_2000050773706_current_rate'
+  metric_octopus_export: 'sensor.octopus_energy_electricity_15p0706167_2000060833200_export_current_rate'
+  octopus_intelligent_slot: 're:(binary_sensor.octopus_energy([0-9a-z_]+|)_intelligent_dispatching)'
+  metric_standing_charge: 'sensor.octopus_energy_electricity_15p0706167_2000050773706_current_standing_charge'
+
+  # --- Tuning ---------------------------------------------------------
+  days_previous:
+    - 7
+  days_previous_weight:
+    - 1
+  forecast_hours: 48

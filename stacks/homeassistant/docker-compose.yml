@@ -32,6 +32,21 @@ services:
       retries: 3
       start_period: 10s
 
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      - POSTGRES_USER=homeassistant
+      - POSTGRES_PASSWORD=POSTGRES
+      - POSTGRES_DB=homeassistant
+    volumes:
+      - /mnt/cephfs/homeassistant-postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U homeassistant -d homeassistant"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
   trmnl-ha:
     image: ghcr.io/usetrmnl/trmnl-ha-amd64:0.7.0
     volumes:
@@ -63,6 +78,7 @@ services:
       - /mnt/cephfs/homeassistant:/config
     depends_on:
       - mosquitto
+      - postgres
     deploy:
       labels:
         - "traefik.enable=true"
@@ -73,7 +89,56 @@ services:
         - "traefik.http.services.homeassistant.loadbalancer.server.port=8123"
         - "traefik.swarm.network=main"
 
+  predbat:
+    image: nipar44/predbat_addon:slim-v8.42.1
+    environment:
+      - TZ=${TZ?error}
+      - WAIT_FOR_HA_HOST=homeassistant
+      - WAIT_FOR_HA_PORT=8123
+      # HA long-lived token, injected from 1Password by deploy.sh (op run).
+      - PREDBAT_TOKEN=${PREDBAT_TOKEN?error}
+    # Shim: write secrets.yaml from the 1Password-provided token and install
+    # the repo-owned apps.yaml (delivered as a swarm config), then hand off to
+    # the image's normal s6 init. Keeps secrets out of git and off the host.
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        set -e
+        mkdir -p /config
+        printf 'ha_key: %s\n' "$$PREDBAT_TOKEN" > /config/secrets.yaml
+        chmod 600 /config/secrets.yaml
+        cp /run/predbat/apps.yaml /config/apps.yaml
+        exec /init
+    volumes:
+      - /mnt/cephfs/predbat:/config
+      - /etc/localtime:/etc/localtime:ro
+    configs:
+      - source: predbat_apps
+        target: /run/predbat/apps.yaml
+    depends_on:
+      - homeassistant
+    deploy:
+      labels:
+        - "traefik.enable=true"
+        - "traefik.http.routers.predbat.rule=Host(`predbat.danhughes.dev`)"
+        - "traefik.http.routers.predbat.entrypoints=websecure"
+        - "traefik.http.routers.predbat.tls=true"
+        - "traefik.http.routers.predbat.tls.certResolver=letsencrypt"
+        - "traefik.http.services.predbat.loadbalancer.server.port=5052"
+        - "traefik.swarm.network=main"
+
 networks:
   default:
     external: true
     name: main
+
+configs:
+  # Repo-owned Predbat config, delivered into the container as a swarm config
+  # (the repo isn't present on the swarm host, so we can't bind-mount it).
+  # Swarm configs are immutable, so deploy.sh content-hashes apps.yaml into
+  # PREDBAT_APPS_HASH; editing the file changes the name and rolls out a fresh
+  # object automatically. deploy.sh also prunes the superseded configs.
+  predbat_apps:
+    name: predbat_apps_${PREDBAT_APPS_HASH:-dev}
+    file: ./predbat/apps.yaml

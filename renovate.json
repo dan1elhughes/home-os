@@ -16,6 +16,13 @@
     {
       "matchPackageNames": ["ghcr.io/linuxserver/lidarr"],
       "allowedVersions": "!/^8\\.1\\.2135$/"
+    },
+    // predbat_addon publishes variant-prefixed tags (e.g. `slim-v8.42.1`,
+    // `alpine-v8.42.1`, `v8.42.1`). Pin Renovate to the `slim-v` track and
+    // teach it to parse the semver that follows the prefix.
+    {
+      "matchPackageNames": ["nipar44/predbat_addon"],
+      "versioning": "regex:^slim-v(?<major>\\d+)\\.(?<minor>\\d+)\\.(?<patch>\\d+)$"
     }
   ]
 }

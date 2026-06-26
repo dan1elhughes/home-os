@@ -26,11 +26,39 @@ if [ -z "${HOMEBASE_OP_ACTIVE:-}" ]; then
     exec op run --environment "$OP_ENVIRONMENT" --account="$OP_ACCOUNT" -- "$0" "$@"
 fi
 
+# Swarm configs are immutable, so we content-hash any predbat apps.yaml and
+# expose the hash to compose via PREDBAT_APPS_HASH. Editing the file changes
+# the hash, which rolls out a new config object automatically.
+export_predbat_apps_hash() {
+    local dir="$1"
+    local apps="$dir/predbat/apps.yaml"
+    unset PREDBAT_APPS_HASH
+    if [ -f "$apps" ]; then
+        PREDBAT_APPS_HASH="$(shasum -a 256 "$apps" | cut -c1-12)"
+        export PREDBAT_APPS_HASH
+    fi
+}
+
+# Remove superseded predbat_apps_* configs, keeping the one we just deployed.
+# The deploy runs without --detach, so it has already converged and detached
+# the previous config by the time we get here. docker config rm safely refuses
+# any config still in use.
+prune_predbat_configs() {
+    local keep="predbat_apps_${PREDBAT_APPS_HASH:-dev}"
+    for cfg in $(docker config ls --format '{{.Name}}' | grep '^predbat_apps_' || true); do
+        if [ "$cfg" != "$keep" ]; then
+            docker config rm "$cfg" >/dev/null 2>&1 && echo "Pruned old config $cfg" || true
+        fi
+    done
+}
+
 deploy_stack() {
     local dir="$1"
     if [ -f "$dir/docker-compose.yml" ]; then
         echo "Deploying stack for $dir"
-        docker stack deploy --compose-file "$dir/docker-compose.yml" "${dir%/}" --detach=true --with-registry-auth
+        export_predbat_apps_hash "$dir"
+        docker stack deploy --compose-file "$dir/docker-compose.yml" "${dir%/}" --detach=false --with-registry-auth
+        prune_predbat_configs
     else
         echo "No docker-compose.yml found in $dir, skipping."
     fi
