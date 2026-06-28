@@ -199,6 +199,15 @@ pred_bat:
   inverter_hybrid: False
 
   reserve: 0
+
+  # ENPHASE custom inverter type has has_reserve_soc: False, which forces
+  # set_reserve_enable: False and set_discharge_during_charge: True in
+  # execute.py. The plan still uses reserve as the simulation floor;
+  # battery_min_soc defaults to max(set_reserve_min, 4%) = 4% upstream.
+  # Setting this to 0 keeps the reserve floor at the apps.yaml value
+  # (reserve: 0) instead of the upstream default of 4%.
+  battery_min_soc: 0
+
   battery_loss: 0.95
   battery_loss_discharge: 0.95
   inverter_loss: 0.97
