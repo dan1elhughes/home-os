@@ -221,6 +221,15 @@ pred_bat:
   octopus_intelligent_slot: 're:(binary_sensor.octopus_energy([0-9a-z_]+|)_intelligent_dispatching)'
   metric_standing_charge: 'sensor.octopus_energy_electricity_15p0706167_2000050773706_current_standing_charge'
 
+  # Override overnight export rate to 0 so Predbat doesn't micro-cycle:
+  # charging at 3.99p then exporting at ~10p looks profitable, but supplier
+  # terms discourage importing just to re-export. With export at 0, the plan
+  # charges once per cheap window and holds for the day.
+  rates_export_override:
+    - start: "23:30:00"
+      end: "05:30:00"
+      rate: 0
+
   # --- Car (EV on a myenergi Zappi) -----------------------------------
   # The car charges on a separate circuit the Envoy can't see, but it DOES
   # appear in the myenergi true-grid CT and (historically) in load. Predbat
