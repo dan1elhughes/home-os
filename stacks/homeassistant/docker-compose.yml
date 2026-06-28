@@ -97,7 +97,9 @@ services:
       - WAIT_FOR_HA_PORT=8123
       # HA long-lived token, injected from 1Password by deploy.sh (op run).
       - PREDBAT_TOKEN=${PREDBAT_TOKEN?error}
-    # Shim: write secrets.yaml from the 1Password-provided token and install
+      # Solcast API key for Predbat's direct cloud PV-forecast interface.
+      - SOLCAST_API_TOKEN=${SOLCAST_API_TOKEN?error}
+    # Shim: write secrets.yaml from the 1Password-provided secrets and install
     # the repo-owned apps.yaml (delivered as a swarm config), then hand off to
     # the image's normal s6 init. Keeps secrets out of git and off the host.
     entrypoint:
@@ -107,6 +109,7 @@ services:
         set -e
         mkdir -p /config
         printf 'ha_key: %s\n' "$$PREDBAT_TOKEN" > /config/secrets.yaml
+        printf 'solcast_api_key: %s\n' "$$SOLCAST_API_TOKEN" >> /config/secrets.yaml
         chmod 600 /config/secrets.yaml
         cp /run/predbat/apps.yaml /config/apps.yaml
         exec /init
