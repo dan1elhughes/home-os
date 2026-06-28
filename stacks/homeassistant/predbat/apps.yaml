@@ -64,16 +64,20 @@ pred_bat:
   # 1.2 kWp forecast (so PV calibration correlates like-for-like once history
   # accrues).
   #
-  # load_today is a PURE-HOUSE daily counter (see home-assistant repo:
-  # sensor.predbat_house_load_today, a utility_meter over a Riemann integration
-  # of sensor.predbat_house_load_power). We do NOT use the Envoy's
-  # energy_consumption_today here: that counter BUNDLES battery charging into
-  # "consumption" (Envoy consumption = house + battery_charge), so a 9.5 kW
-  # overnight battery charge appears as a phantom ~12 kW house-load spike and
-  # the battery is planned to chase a load that isn't real. The derived counter
-  # accrues correct house load (~0.7 kW mean) going forward (no retro backfill).
+  # load_today is PURE house load from the Enphase cloud integration
+  # (enphase_envoy_cloud_control). sensor.enphase_battery_enphase_today_consumption
+  # is Enlighten's own daily energy-flow accounting: its state = the "consumption"
+  # bucket (= solar_home + battery_home + grid_home), i.e. house load with battery
+  # charge/discharge already separated out and the car EXCLUDED (the Zappi shows on
+  # the grid CT but not in this consumption figure). total_increasing kWh, resets
+  # at local midnight -- exactly what load_today needs.
+  #
+  # This SUPERSEDES the earlier derived counter (Riemann integration of
+  # predbat_house_load_power -> utility_meter), which was a workaround for the
+  # absence of a pure-house sensor. The Envoy energy_consumption_today is NOT used
+  # here: it bundles battery charging into "consumption".
   load_today:
-    - sensor.predbat_house_load_today
+    - sensor.enphase_battery_enphase_today_consumption
   pv_today:
     - sensor.myenergi_myenergi_hub_generated_today
   # Grid import/export from the myenergi hub (clean daily counters).
