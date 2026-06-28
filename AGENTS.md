@@ -49,10 +49,12 @@ confirm before anything destructive.
 
 Predbat (`homeassistant_predbat`) runs the optimiser in
 `Control charge & discharge` + `set_read_only: on` — it **plans only, commands
-nothing**. `apps.yaml` is in `stacks/homeassistant/predbat/`; mode/read-only are
-also persisted in `predbat_config.json` on the cephfs volume and override
-`apps.yaml` on restart (re-assert via `select.predbat_mode` +
-`switch.predbat_set_read_only` if it ever drifts).
+nothing**. `apps.yaml` is in `stacks/homeassistant/predbat/`. **Any value changed
+via the Predbat HA UI** is persisted in `predbat_config.json` on the
+cephfs volume and **overrides `apps.yaml` on restart**. This includes
+`inverter_hybrid`, `set_reserve_min`, loss values, charge/window
+switches — basically everything exposed as a HA entity. If `apps.yaml`
+says one thing and the plan says another, check the JSON.
 
 Read the plan via the HA API:
 
