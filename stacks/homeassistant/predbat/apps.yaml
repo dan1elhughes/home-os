@@ -262,19 +262,9 @@ pred_bat:
     - 'waiting for export'
 
   # --- Tuning ---------------------------------------------------------
-  # days_previous is a list of INDIVIDUAL lookback-days (each paired with a
-  # weight), NOT a single averaging window. [1,2,3] = average yesterday, 2 days
-  # ago and 3 days ago at equal weight -- a 3-day mean of recent house load.
-  # (A single [7] would copy only the one day from a week ago.) A 3-day average
-  # is robust, weights recent behaviour, and becomes useful after ~1 day of the
-  # new pure-house load_today counter accruing. Predbat also auto-drops the
-  # lowest-load day from this set (e.g. a day away), so multiple days matter.
-  days_previous:
-    - 1   # yesterday's house-load profile
-    - 2   # 2 days ago
-    - 3   # 3 days ago
-  days_previous_weight:
-    - 1   # equal weight for each of the 3 days (simple average)
-    - 1
-    - 1
+  # Weighted-bucket load forecast: uses all history within a rolling window,
+  # weighted by recency (0.9^days), day-of-week similarity, and holiday state.
+  # More robust than a fixed N-day average when patterns shift or gaps exist.
+  # Window defaults to 7 days (max 30). Overrides the old days_previous list.
+  days_previous_auto: True
   forecast_hours: 48   # plan horizon: 48 hours ahead
