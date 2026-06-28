@@ -202,19 +202,20 @@ pred_bat:
 
   # ENPHASE custom inverter type has has_reserve_soc: False, which forces
   # set_reserve_enable: False and set_discharge_during_charge: True in
-  # execute.py. The plan still uses reserve as the simulation floor;
-  # battery_min_soc defaults to max(set_reserve_min, 4%) = 4% upstream.
-  # Setting this to 0 keeps the reserve floor at the apps.yaml value
-  # (reserve: 0) instead of the upstream default of 4%.
-  battery_min_soc: 0
+  # execute.py. battery_min_soc sets the simulation reserve floor; the
+  # Enphase battery has a hardcoded 5% physical minimum that cannot be
+  # discharged below.
+  battery_min_soc: 5
 
-  battery_loss: 0.95
-  battery_loss_discharge: 0.95
-  inverter_loss: 0.97
+  # Battery round-trip losses as a fraction (0.05 = 5% loss = 95% efficient).
+  # NB: Predbat inverts these at load time (1.0 - config_value), so "0.95"
+  # would be interpreted as 95% LOSS → 5% efficiency → 20x discharge amp.
+  battery_loss: 0.05
+  battery_loss_discharge: 0.05
+  # Inverter loss is also inverted upstream; 0.03 = 3% loss = 97% efficient
+  inverter_loss: 0.03
 
   # --- Octopus Energy rates (BottlecapDave integration) ---------------
-  # Predbat wants the *_current_rate sensors here; it auto-discovers the
-  # matching *_current_day_rates event entities for the full forecast.
   metric_octopus_import: 'sensor.octopus_energy_electricity_15p0706167_2000050773706_current_rate'
   metric_octopus_export: 'sensor.octopus_energy_electricity_15p0706167_2000060833200_export_current_rate'
   octopus_intelligent_slot: 're:(binary_sensor.octopus_energy([0-9a-z_]+|)_intelligent_dispatching)'
