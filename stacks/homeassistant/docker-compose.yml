@@ -90,7 +90,7 @@ services:
         - "traefik.swarm.network=main"
 
   predbat:
-    image: nipar44/predbat_addon:slim-v8.42.1
+    image: nipar44/predbat_addon:slim-v8.42.5
     environment:
       - TZ=${TZ?error}
       - WAIT_FOR_HA_HOST=homeassistant
