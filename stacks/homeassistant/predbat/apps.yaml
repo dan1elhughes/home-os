@@ -218,7 +218,14 @@ pred_bat:
   # --- Octopus Energy rates (BottlecapDave integration) ---------------
   metric_octopus_import: 'sensor.octopus_energy_electricity_15p0706167_2000050773706_current_rate'
   metric_octopus_export: 'sensor.octopus_energy_electricity_15p0706167_2000060833200_export_current_rate'
-  octopus_intelligent_slot: 're:(binary_sensor.octopus_energy([0-9a-z_]+|)_intelligent_dispatching)'
+  # Octopus Intelligent dispatch slot sensor. Points at our filtered template
+  # sensor (binary_sensor.octopus_intelligent_dispatching_filtered) which blanks
+  # planned_dispatches when smart charge is off — see template.yaml in the
+  # home-assistant repo. Without this filter, Predbat reads stale planned
+  # dispatches from Octopus's API (which returns them even when smart charge is
+  # disabled) and overrides import rates to off-peak via rate_add_io_slots,
+  # causing the battery to plan discharging before phantom cheap windows.
+  octopus_intelligent_slot: 'binary_sensor.octopus_intelligent_dispatching_filtered'
   octopus_saving_session: 're:(event.octopus_energy_([0-9a-z_]+|)_octoplus_saving_session_events)'
   octopus_free_session: 're:(event.octopus_energy_([0-9a-z_]+|)_octoplus_free_electricity_session_events)'
   metric_standing_charge: 'sensor.octopus_energy_electricity_15p0706167_2000050773706_current_standing_charge'
@@ -251,6 +258,8 @@ pred_bat:
   car_charging_energy: 'sensor.myenergi_zappi_charge_added_session'
   # Plug status -> whether the car will charge in upcoming cheap slots. Octopus
   # Intelligent dispatch (octopus_intelligent_slot, above) takes priority when active.
+  # Two EVs share this Zappi; only one is on Octopus Intelligent, but both can
+  # charge during cheap slots, so the plug status is the right signal here.
   car_charging_planned:
     - 'sensor.myenergi_zappi_plug_status'
   car_charging_planned_response:
