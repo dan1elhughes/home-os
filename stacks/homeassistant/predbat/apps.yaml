@@ -270,3 +270,12 @@ pred_bat:
   # Window defaults to 7 days (max 30). Overrides the old days_previous list.
   days_previous_auto: True
   forecast_hours: 48   # plan horizon: 48 hours ahead
+
+  # Enable advanced mode for additional tuning options and features.
+  advanced_mode: True
+
+  # Merge contiguous charge and discharge slots into longer blocks (reduces
+  # bitty charging/discharging and the number of individual schedules the
+  # downstream automation writes).
+  combine_charge_slots: True
+  combine_discharge_slots: True
