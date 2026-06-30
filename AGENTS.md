@@ -1,8 +1,12 @@
 # Agent notes — home-os
 
-Docker Swarm / Ansible infra. Stacks live under `stacks/<name>/`; deploy with
-`stacks/deploy.sh <stack>` (wraps `op run` for 1Password secrets, content-hashes
-any `predbat/apps.yaml` into an immutable swarm config, prunes superseded ones).
+Docker Swarm / Ansible infra. Stacks live under `stacks/<name>/`; deploy from
+inside the `stacks/` directory with `DOCKER_CONTEXT=swarm ./deploy.sh <stack>`
+(or switch to the `swarm` context first). The script expects stack names relative
+to `stacks/`, wraps `op run` for 1Password secrets, content-hashes any
+`predbat/apps.yaml` into an immutable swarm config, and prunes superseded ones.
+Running `stacks/deploy.sh homeassistant` from the repo root looks for
+`./homeassistant/docker-compose.yml` and skips the deploy.
 
 ## Swarm access
 

@@ -26,13 +26,13 @@ pred_bat:
   prefix: predbat
 
   # Standalone in Docker, talking to HA over its API on the swarm network.
-  ha_url: 'http://homeassistant:8123'
+  ha_url: "http://homeassistant:8123"
   ha_key: !secret ha_key
 
   timezone: Europe/London
   currency_symbols:
-    - '£'
-    - 'p'
+    - "£"
+    - "p"
   threads: auto
 
   # Predbat computes a full charge/discharge PLAN but never actuates the
@@ -51,7 +51,7 @@ pred_bat:
   # corrupted the SQLite-on-cephfs recorder; the recorder now runs on Postgres
   # (see ../docker-compose.yml + home-assistant repo recorder.yaml), which
   # handles that load.
-  mode: 'Control charge & discharge'
+  mode: "Control charge & discharge"
   set_read_only: True
 
   # --- Energy counters (daily kWh, reset at midnight) -----------------
@@ -178,7 +178,7 @@ pred_bat:
   # crash is caught by Predbat's task wrapper and does not affect the main plan.
   # metric_pv_calibration_enable does NOT prevent it (the crashing loop runs
   # regardless). Do not treat the recurring SolarAPI traceback as a wiring error.
-  solcast_host: 'https://api.solcast.com.au/'
+  solcast_host: "https://api.solcast.com.au/"
   solcast_api_key: !secret solcast_api_key
   solcast_poll_hours: 8
 
@@ -216,8 +216,8 @@ pred_bat:
   inverter_loss: 0.03
 
   # --- Octopus Energy rates (BottlecapDave integration) ---------------
-  metric_octopus_import: 'sensor.octopus_energy_electricity_15p0706167_2000050773706_current_rate'
-  metric_octopus_export: 'sensor.octopus_energy_electricity_15p0706167_2000060833200_export_current_rate'
+  metric_octopus_import: "sensor.octopus_energy_electricity_15p0706167_2000050773706_current_rate"
+  metric_octopus_export: "sensor.octopus_energy_electricity_15p0706167_2000060833200_export_current_rate"
   # Octopus Intelligent dispatch slot sensor. Points at our filtered template
   # sensor (binary_sensor.octopus_intelligent_dispatching_filtered) which blanks
   # planned_dispatches when smart charge is off — see template.yaml in the
@@ -225,19 +225,19 @@ pred_bat:
   # dispatches from Octopus's API (which returns them even when smart charge is
   # disabled) and overrides import rates to off-peak via rate_add_io_slots,
   # causing the battery to plan discharging before phantom cheap windows.
-  octopus_intelligent_slot: 'binary_sensor.octopus_intelligent_dispatching_filtered'
-  octopus_saving_session: 're:(event.octopus_energy_([0-9a-z_]+|)_octoplus_saving_session_events)'
-  octopus_free_session: 're:(event.octopus_energy_([0-9a-z_]+|)_octoplus_free_electricity_session_events)'
-  metric_standing_charge: 'sensor.octopus_energy_electricity_15p0706167_2000050773706_current_standing_charge'
+  octopus_intelligent_slot: "binary_sensor.octopus_intelligent_dispatching_filtered"
+  octopus_saving_session: "re:(event.octopus_energy_([0-9a-z_]+|)_octoplus_saving_session_events)"
+  octopus_free_session: "re:(event.octopus_energy_([0-9a-z_]+|)_octoplus_free_electricity_session_events)"
+  metric_standing_charge: "sensor.octopus_energy_electricity_15p0706167_2000050773706_current_standing_charge"
 
   # Override overnight export rate to 0 so Predbat doesn't micro-cycle:
   # charging at 3.99p then exporting at ~10p looks profitable, but supplier
   # terms discourage importing just to re-export. With export at 0, the plan
   # charges once per cheap window and holds for the day.
-  rates_export_override:
-    - start: "23:30:00"
-      end: "05:30:00"
-      rate: 0
+  # rates_export_override:
+  #   - start: "23:30:00"
+  #     end: "05:30:00"
+  #     rate: 0
 
   # --- Car (EV on a myenergi Zappi) -----------------------------------
   # The car charges on a separate circuit the Envoy can't see, but it DOES
@@ -255,36 +255,29 @@ pred_bat:
   # fit this Zappi's entity name (no numeric id segment), so we set it explicitly.
   num_cars: 1
   car_charging_hold: True
-  car_charging_energy: 'sensor.myenergi_zappi_charge_added_session'
+  car_charging_energy: "sensor.myenergi_zappi_charge_added_session"
   # Plug status -> whether the car will charge in upcoming cheap slots. Octopus
   # Intelligent dispatch (octopus_intelligent_slot, above) takes priority when active.
   # Two EVs share this Zappi; only one is on Octopus Intelligent, but both can
   # charge during cheap slots, so the plug status is the right signal here.
   car_charging_planned:
-    - 'sensor.myenergi_zappi_plug_status'
+    - "sensor.myenergi_zappi_plug_status"
   car_charging_planned_response:
-    - 'on'
-    - 'yes'
-    - 'true'
-    - 'connected'
-    - 'ev connected'
-    - 'charging'
-    - 'boosting'
-    - 'waiting for export'
+    - "on"
+    - "yes"
+    - "true"
+    - "connected"
+    - "ev connected"
+    - "charging"
+    - "boosting"
+    - "waiting for export"
 
-  # --- Tuning ---------------------------------------------------------
   # Weighted-bucket load forecast: uses all history within a rolling window,
   # weighted by recency (0.9^days), day-of-week similarity, and holiday state.
   # More robust than a fixed N-day average when patterns shift or gaps exist.
   # Window defaults to 7 days (max 30). Overrides the old days_previous list.
   days_previous_auto: True
-  forecast_hours: 48   # plan horizon: 48 hours ahead
+  forecast_hours: 48 # plan horizon: 48 hours ahead
 
   # Enable advanced mode for additional tuning options and features.
   advanced_mode: True
-
-  # Merge contiguous charge and discharge slots into longer blocks (reduces
-  # bitty charging/discharging and the number of individual schedules the
-  # downstream automation writes).
-  combine_charge_slots: True
-  combine_discharge_slots: True
