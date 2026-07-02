@@ -10,7 +10,7 @@ services:
         - "traefik.http.routers.tasmoadmin.entrypoints=websecure"
         - "traefik.http.routers.tasmoadmin.tls=true"
         - "traefik.http.routers.tasmoadmin.tls.certResolver=letsencrypt"
-        - "traefik.http.services.tasmoadmin.loadbalancer.server.port=9541"
+        - "traefik.http.services.tasmoadmin.loadbalancer.server.port=80"
         - "traefik.swarm.network=main"
         - "kuma.tasmoadmin.http.name=TasmoAdmin"
         - "kuma.tasmoadmin.http.url=https://tasmoadmin.danhughes.dev"
