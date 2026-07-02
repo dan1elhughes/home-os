@@ -22,6 +22,7 @@
     // `alpine-v8.42.1`, `v8.42.1`). Pin Renovate to the `slim-v` track and
     // teach it to parse the semver that follows the prefix.
     {
+      "matchDatasources": ["docker"],
       "matchPackageNames": ["nipar44/predbat_addon"],
       "versioning": "regex:^slim-v(?<major>\\d+)\\.(?<minor>\\d+)\\.(?<patch>\\d+)$"
     }
