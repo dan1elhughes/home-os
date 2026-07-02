@@ -1,6 +1,6 @@
 services:
   traefik:
-    image: traefik:v3.6
+    image: traefik:v3.7
     command:
       - "--entrypoints.web.address=:80"
       - "--entrypoints.websecure.address=:443"
