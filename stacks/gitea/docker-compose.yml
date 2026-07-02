@@ -25,7 +25,7 @@ services:
         - "traefik.http.services.gitea.loadbalancer.server.port=3000"
         - "traefik.swarm.network=main"
         - "kuma.gitea.http.name=Gitea"
-        - "kuma.gitea.http.url=https://gitea.danhughes.dev"
+        - "kuma.gitea.http.url=https://gitea.danhughes.dev/api/healthz"
 
   db:
     image: postgres:18.4

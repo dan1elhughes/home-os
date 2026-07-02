@@ -19,7 +19,7 @@ services:
         - "traefik.http.services.apprise.loadbalancer.server.port=8000"
         - "traefik.swarm.network=main"
         - "kuma.apprise.http.name=Apprise"
-        - "kuma.apprise.http.url=https://apprise.danhughes.dev"
+        - "kuma.apprise.http.url=https://apprise.danhughes.dev/status"
 
 networks:
   default:

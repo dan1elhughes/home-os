@@ -18,7 +18,7 @@ services:
         - "traefik.http.services.truenas.loadbalancer.server.port=80"
         - "traefik.swarm.network=main"
         - "kuma.truenas.http.name=TrueNAS"
-        - "kuma.truenas.http.url=https://truenas.danhughes.dev"
+        - "kuma.truenas.http.url=https://truenas.danhughes.dev/ui/"
 
 networks:
   default:

@@ -26,25 +26,36 @@ services:
         - "traefik.http.routers.uptime-kuma.tls.certResolver=letsencrypt"
         - "traefik.http.services.uptime-kuma.loadbalancer.server.port=3001"
         - "traefik.swarm.network=main"
-        # AutoKuma self-monitor: create a monitor for Uptime Kuma itself.
+        # AutoKuma self-monitor: root returns 302 (redirect to /dashboard) —
+        # Uptime Kuma has no 200 health endpoint, so accept 302.
         - "kuma.uptime-kuma.http.name=Uptime Kuma"
         - "kuma.uptime-kuma.http.url=https://uptime-kuma.danhughes.dev"
+        - 'kuma.uptime-kuma.http.accepted_statuscodes=["200-299","302"]'
+        # Define the "Internal" tag used by all AutoKuma-managed monitors.
+        - "kuma.internal.tag.name=Internal"
+        - "kuma.internal.tag.color=#0066FF"
 
   autokuma:
     image: ghcr.io/bigboot/autokuma:latest
     environment:
-      - TZ=${TZ?error}
+      TZ: ${TZ?error}
       # No auth on Uptime Kuma, so just the URL is needed.
-      - AUTOKUMA__KUMA__URL=http://uptime-kuma:3001
+      AUTOKUMA__KUMA__URL: http://uptime-kuma:3001
       # Read swarm *service* labels (deploy.labels), same place Traefik reads.
-      - AUTOKUMA__DOCKER__ENABLED=true
-      - AUTOKUMA__DOCKER__SOURCE=Services
-      - AUTOKUMA__DOCKER__HOSTS=unix:///var/run/docker.sock
-      - AUTOKUMA__DOCKER__LABEL_PREFIX=kuma
+      AUTOKUMA__DOCKER__ENABLED: "true"
+      AUTOKUMA__DOCKER__SOURCE: Services
+      AUTOKUMA__DOCKER__HOSTS: unix:///var/run/docker.sock
+      AUTOKUMA__DOCKER__LABEL_PREFIX: kuma
       # Delete monitors when their kuma.* labels disappear from a service.
-      - AUTOKUMA__ON_DELETE=delete
-      # Assign the "Apprise (Slack)" notification (DB id 1) to all HTTP monitors.
-      - 'AUTOKUMA__DEFAULT_SETTINGS=http.notificationIDList: {"1": true}'
+      AUTOKUMA__ON_DELETE: delete
+      # Defaults applied to every generated monitor:
+      #   - assign the "Apprise (Slack)" notification (DB id 1)
+      #   - retry twice before marking down (smooths transient blips)
+      #   - tag as "Internal"
+      AUTOKUMA__DEFAULT_SETTINGS: |-
+        http.notificationIDList: {"1": true}
+        http.max_retries: 2
+        http.tag_names: [{"name": "internal"}]
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - "/mnt/cephfs/autokuma-data:/data"
