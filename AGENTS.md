@@ -5,8 +5,8 @@ inside the `stacks/` directory with `DOCKER_CONTEXT=swarm ./deploy.sh <stack>`
 (or switch to the `swarm` context first). The script expects stack names relative
 to `stacks/`, wraps `op run` for 1Password secrets, content-hashes any
 `predbat/apps.yaml` into an immutable swarm config, and prunes superseded ones.
-Running `stacks/deploy.sh homeassistant` from the repo root looks for
-`./homeassistant/docker-compose.yml` and skips the deploy.
+Run it from inside `stacks/` — from the repo root the path resolution
+breaks and nothing deploys.
 
 ## Swarm access
 
@@ -19,6 +19,20 @@ Running `stacks/deploy.sh homeassistant` from the repo root looks for
 - `/mnt/cephfs` is a CephFS mount replicated across cl01/cl02/cl03
   (10.10.10.21/22/23). Create a bind-mount dir on **one** node only — it
   propagates to the others. Don't `mkdir` on all three.
+- For a one-service change (e.g. a single Traefik label), `docker service update
+  --label-add …` is surgical and needs no secrets; `deploy.sh` always requires
+  the full 1Password set because the compose file has `${VAR?error}` across
+  several services.
+
+## Traefik (ingress)
+
+Traefik runs in the `traefik` stack (swarm provider, `main` overlay network,
+`exposedbydefault=false`). Each service opts in via compose labels:
+`traefik.enable=true`, a `Host(...)` rule, and
+`traefik.http.services.<name>.loadbalancer.server.port=<port>` — the backend
+port Traefik forwards to. **Bad Gateway almost always means that port label
+doesn't match what the container actually listens on.** Verify with
+`docker exec <container> ss -tlnp` (or `netstat`) against the label.
 
 ## Controlling Home Assistant
 
