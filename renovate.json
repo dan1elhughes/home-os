@@ -18,10 +18,10 @@
       "matchPackageNames": ["ghcr.io/linuxserver/lidarr"],
       "allowedVersions": "!/^8\\.1\\.2135$/"
     },
-    // PostgreSQL major versions break the data directory. Pin to 17.x.
+    // PostgreSQL major versions break the data directory. Pin to 18.x.
     {
       "matchPackageNames": ["postgres"],
-      "allowedVersions": "/^17/"
+      "allowedVersions": "/^18/"
     },
     // predbat_addon publishes variant-prefixed tags (e.g. `slim-v8.42.1`,
     // `alpine-v8.42.1`, `v8.42.1`). Pin Renovate to the `slim-v` track and
