@@ -26,7 +26,7 @@ services:
         - "traefik.swarm.network=main"
 
   db:
-    image: postgres:18.3
+    image: postgres:18.4
     user: "${PUID?error}:${PGID?error}"
     environment:
       - POSTGRES_USER=gitea

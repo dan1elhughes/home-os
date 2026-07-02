@@ -33,7 +33,7 @@ services:
       start_period: 10s
 
   postgres:
-    image: postgres:17-alpine
+    image: postgres:18-alpine
     environment:
       - POSTGRES_USER=homeassistant
       - POSTGRES_PASSWORD=POSTGRES
