@@ -182,6 +182,17 @@ pred_bat:
   solcast_api_key: !secret solcast_api_key
   solcast_poll_hours: 8
 
+  # --- Carbon intensity (National Grid API, direct) -------------------
+  # Predbat fetches grid carbon intensity gCO2/kWh directly from the
+  # National Grid API using the registered postcode. This creates
+  # sensor.predbat_carbon_intensity. carbon_enable shows carbon in the plan;
+  # set carbon_metric > 0 to weight carbon into charge/dispatch decisions.
+  # Postcode is a !secret (from 1Password via the entrypoint shim)
+  # -- see ../docker-compose.yml.
+  carbon_postcode: !secret postcode
+  carbon_automatic: true
+  carbon_enable: True
+
   # --- Inverter physical limits ---------------------------------------
   # 3x Encharge ~ 15 kWh usable; ~9.6 kW combined (matches battery_power_rate_kw).
   # battery_rate_max is the key Predbat reads for a non-REST custom inverter;
@@ -279,5 +290,6 @@ pred_bat:
   days_previous_auto: True
   forecast_hours: 48 # plan horizon: 48 hours ahead
 
-  # Enable advanced mode for additional tuning options and features.
-  advanced_mode: True
+  # Enable expert mode — exposes additional tuning entities (metric weights,
+  # min improvements, manual adjustments, etc.).
+  expert_mode: True

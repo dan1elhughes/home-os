@@ -99,6 +99,8 @@ services:
       - PREDBAT_TOKEN=${PREDBAT_TOKEN?error}
       # Solcast API key for Predbat's direct cloud PV-forecast interface.
       - SOLCAST_API_TOKEN=${SOLCAST_API_TOKEN?error}
+      # Postcode for National Grid carbon intensity data.
+      - POSTCODE=${POSTCODE?error}
     # Shim: write secrets.yaml from the 1Password-provided secrets and install
     # the repo-owned apps.yaml (delivered as a swarm config), then hand off to
     # the image's normal s6 init. Keeps secrets out of git and off the host.
@@ -110,6 +112,7 @@ services:
         mkdir -p /config
         printf 'ha_key: %s\n' "$$PREDBAT_TOKEN" > /config/secrets.yaml
         printf 'solcast_api_key: %s\n' "$$SOLCAST_API_TOKEN" >> /config/secrets.yaml
+        printf 'postcode: %s\n' "$$POSTCODE" >> /config/secrets.yaml
         chmod 600 /config/secrets.yaml
         cp /run/predbat/apps.yaml /config/apps.yaml
         exec /init
