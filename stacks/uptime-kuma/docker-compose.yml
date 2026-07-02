@@ -4,8 +4,19 @@ services:
     image: louislam/uptime-kuma:2.4.0
     environment:
       - TZ=${TZ?error}
+      # External MariaDB backend. With these set on first boot (data dir has
+      # no kuma.db yet), Kuma auto-connects and skips the interactive setup
+      # screen. Stack is local-only, so simple shared credentials are fine.
+      - UPTIME_KUMA_DB_TYPE=mariadb
+      - UPTIME_KUMA_DB_HOSTNAME=mariadb
+      - UPTIME_KUMA_DB_PORT=3306
+      - UPTIME_KUMA_DB_NAME=kuma
+      - UPTIME_KUMA_DB_USERNAME=mariadb
+      - UPTIME_KUMA_DB_PASSWORD=mariadb
     volumes:
       - "/mnt/cephfs/uptime-kuma:/app/data"
+    depends_on:
+      - mariadb
     deploy:
       labels:
         - "traefik.enable=true"
@@ -15,6 +26,23 @@ services:
         - "traefik.http.routers.uptime-kuma.tls.certResolver=letsencrypt"
         - "traefik.http.services.uptime-kuma.loadbalancer.server.port=3001"
         - "traefik.swarm.network=main"
+
+  mariadb:
+    image: mariadb:11.4
+    environment:
+      - MARIADB_ROOT_PASSWORD=mariadb
+      - MARIADB_DATABASE=kuma
+      - MARIADB_USER=mariadb
+      - MARIADB_PASSWORD=mariadb
+      - TZ=${TZ?error}
+    volumes:
+      - "/mnt/cephfs/uptime-kuma-mariadb:/var/lib/mysql"
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
 
 networks:
   default:

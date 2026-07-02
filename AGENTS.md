@@ -16,6 +16,9 @@ Running `stacks/deploy.sh homeassistant` from the repo root looks for
 - Services move between nodes on redeploy. To find a service's container:
   `ssh 10.10.10.20 'docker service ps <svc> --filter desired-state=running'`,
   then `docker ps` / `docker exec` on that node. Don't assume a fixed node/id.
+- `/mnt/cephfs` is a CephFS mount replicated across cl01/cl02/cl03
+  (10.10.10.21/22/23). Create a bind-mount dir on **one** node only — it
+  propagates to the others. Don't `mkdir` on all three.
 
 ## Controlling Home Assistant
 
