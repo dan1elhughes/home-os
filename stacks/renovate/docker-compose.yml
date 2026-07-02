@@ -30,6 +30,8 @@ services:
         - "traefik.http.routers.renovate.tls.certResolver=letsencrypt"
         - "traefik.http.services.renovate.loadbalancer.server.port=8080"
         - "traefik.swarm.network=main"
+        - "kuma.renovate.http.name=Renovate"
+        - "kuma.renovate.http.url=https://renovate.danhughes.dev"
         - "swarm.cronjob.enable=true"
         - "swarm.cronjob.schedule=0 6 * * *"
         - "swarm.cronjob.skip-running=true"

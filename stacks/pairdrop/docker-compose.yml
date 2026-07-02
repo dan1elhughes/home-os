@@ -16,6 +16,8 @@ services:
         - "traefik.http.routers.pairdrop.tls.certResolver=letsencrypt"
         - "traefik.http.services.pairdrop.loadbalancer.server.port=3000"
         - "traefik.swarm.network=main"
+        - "kuma.pairdrop.http.name=PairDrop"
+        - "kuma.pairdrop.http.url=https://pairdrop.danhughes.dev"
 
 networks:
   default:

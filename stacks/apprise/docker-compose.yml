@@ -18,6 +18,8 @@ services:
         - "traefik.http.routers.apprise.tls.certResolver=letsencrypt"
         - "traefik.http.services.apprise.loadbalancer.server.port=8000"
         - "traefik.swarm.network=main"
+        - "kuma.apprise.http.name=Apprise"
+        - "kuma.apprise.http.url=https://apprise.danhughes.dev"
 
 networks:
   default:

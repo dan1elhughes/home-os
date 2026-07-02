@@ -12,6 +12,8 @@ services:
         - "traefik.http.routers.tasmoadmin.tls.certResolver=letsencrypt"
         - "traefik.http.services.tasmoadmin.loadbalancer.server.port=9541"
         - "traefik.swarm.network=main"
+        - "kuma.tasmoadmin.http.name=TasmoAdmin"
+        - "kuma.tasmoadmin.http.url=https://tasmoadmin.danhughes.dev"
 
   mosquitto:
     image: eclipse-mosquitto:2.0.22
@@ -88,6 +90,8 @@ services:
         - "traefik.http.routers.homeassistant.tls.certResolver=letsencrypt"
         - "traefik.http.services.homeassistant.loadbalancer.server.port=8123"
         - "traefik.swarm.network=main"
+        - "kuma.homeassistant.http.name=Home Assistant"
+        - "kuma.homeassistant.http.url=https://home.danhughes.dev"
 
   predbat:
     image: nipar44/predbat_addon:slim-v8.43.1
@@ -133,6 +137,8 @@ services:
         - "traefik.http.routers.predbat.tls.certResolver=letsencrypt"
         - "traefik.http.services.predbat.loadbalancer.server.port=5052"
         - "traefik.swarm.network=main"
+        - "kuma.predbat.http.name=Predbat"
+        - "kuma.predbat.http.url=https://predbat.danhughes.dev"
 
 networks:
   default:

@@ -16,6 +16,8 @@ services:
         - "traefik.http.routers.transmission.tls.certResolver=letsencrypt"
         - "traefik.http.services.transmission.loadbalancer.server.port=9091"
         - "traefik.swarm.network=main"
+        - "kuma.transmission.http.name=Transmission"
+        - "kuma.transmission.http.url=https://transmission.danhughes.dev"
 
   prowlarr:
     image: ghcr.io/linuxserver/prowlarr:2.4.0
@@ -36,6 +38,8 @@ services:
         - "traefik.http.routers.prowlarr.tls.certResolver=letsencrypt"
         - "traefik.http.services.prowlarr.loadbalancer.server.port=9696"
         - "traefik.swarm.network=main"
+        - "kuma.prowlarr.http.name=Prowlarr"
+        - "kuma.prowlarr.http.url=https://prowlarr.danhughes.dev"
 
   radarr:
     image: ghcr.io/linuxserver/radarr:6.2.1
@@ -58,6 +62,8 @@ services:
         - "traefik.http.routers.radarr.tls.certResolver=letsencrypt"
         - "traefik.http.services.radarr.loadbalancer.server.port=7878"
         - "traefik.swarm.network=main"
+        - "kuma.radarr.http.name=Radarr"
+        - "kuma.radarr.http.url=https://radarr.danhughes.dev"
 
   sonarr:
     image: ghcr.io/linuxserver/sonarr:4.0.19
@@ -80,6 +86,8 @@ services:
         - "traefik.http.routers.sonarr.tls.certResolver=letsencrypt"
         - "traefik.http.services.sonarr.loadbalancer.server.port=8989"
         - "traefik.swarm.network=main"
+        - "kuma.sonarr.http.name=Sonarr"
+        - "kuma.sonarr.http.url=https://sonarr.danhughes.dev"
 
   lidarr:
     image: ghcr.io/linuxserver/lidarr:3.1.0
@@ -102,6 +110,8 @@ services:
         - "traefik.http.routers.lidarr.tls.certResolver=letsencrypt"
         - "traefik.http.services.lidarr.loadbalancer.server.port=8686"
         - "traefik.swarm.network=main"
+        - "kuma.lidarr.http.name=Lidarr"
+        - "kuma.lidarr.http.url=https://lidarr.danhughes.dev"
 
   swiparr:
     image: ghcr.io/m3sserstudi0s/swiparr:1.5.0
@@ -124,6 +134,8 @@ services:
         - "traefik.http.routers.swiparr.tls.certResolver=letsencrypt"
         - "traefik.http.services.swiparr.loadbalancer.server.port=4321"
         - "traefik.swarm.network=main"
+        - "kuma.swiparr.http.name=Swiparr"
+        - "kuma.swiparr.http.url=https://swiparr.danhughes.dev"
 
 volumes:
   downloads:

@@ -13,6 +13,8 @@ services:
 
         - "traefik.http.services.netboot.loadbalancer.server.port=80"
         - "traefik.swarm.network=main"
+        - "kuma.netboot.http.name=Netboot"
+        - "kuma.netboot.http.url=https://netboot.danhughes.dev"
 
 networks:
   default:
