@@ -34,6 +34,14 @@ port Traefik forwards to. **Bad Gateway almost always means that port label
 doesn't match what the container actually listens on.** Verify with
 `docker exec <container> ss -tlnp` (or `netstat`) against the label.
 
+**`*.danhughes.dev` is entirely internal — DNS only resolves over the VPN.**
+Treat the domain as private network space. Services exposed on it do not need
+their own auth, TLS termination beyond Traefik's existing LetsEncrypt cert, or
+egress hardening, and there is no public-internet attack surface to worry
+about. Don't add password/2FA layers on top unless the service itself demands it
+(e.g. an AI agent that can run shell — then add `OPENCODE_SERVER_PASSWORD`
+even on the internal domain, because anything on the VPN can reach it).
+
 ## Controlling Home Assistant
 
 HA runs in the `homeassistant` stack; config is in the **`../home-assistant`**
