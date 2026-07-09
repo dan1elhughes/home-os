@@ -35,6 +35,10 @@ pred_bat:
     - "p"
   threads: auto
 
+  # Only notify Dan's device, not every mobile device in the house.
+  notify_devices:
+    - dan
+
   # Predbat computes a full charge/discharge PLAN but never actuates the
   # battery -- our own HA automation reads the plan and applies it to Enphase.
   #   - "Control charge & discharge" makes Predbat calculate best charge AND
