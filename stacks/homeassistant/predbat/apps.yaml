@@ -1,23 +1,26 @@
-# ------------------------------------------------------------------
-# Predbat config for home-os (CONTROL mode, read-only execute = PLAN ONLY)
+# -----------------------------------------------------------------------------
+# Predbat config for home-os
 #
-# Hardware: Enphase Envoy + 3x Encharge (15 kWh) + Octopus Energy tariff.
-# Predbat cannot natively control Enphase/EcoFlow. It runs in
-# "Control charge & discharge" so it CALCULATES a full charge/discharge
-# plan, but with set_read_only: True the execute phase issues NO control
-# commands. A separate HA automation (Enphase control v2) reads the plan
-# and applies it to the Enphase battery. The existing
-# unified_battery_schedule automations remain in charge of the battery
-# until v2 takes over (they must not both drive it).
+# Hardware: Enphase Envoy + 3x Encharge (~15 kWh), 1.2 kWp PV on a dumb
+# string inverter, myenergi Zappi, Octopus Intelligent Go tariff.
 #
-# NB: mode + set_read_only here are ALSO persisted in predbat_config.json
-# on the cephfs volume, which OVERRIDES this file on restart. After a
-# redeploy, re-assert via select.predbat_mode + switch.predbat_set_read_only.
+# Predbat cannot natively control Enphase/EcoFlow, so it runs in "Control
+# charge & discharge" to CALCULATE a full charge/export plan, while
+# set_read_only: True stops the execute phase issuing any control commands.
+# A separate HA automation ("Enphase control v2") reads the plan and applies
+# it to the Enphase battery. Until v2 takes over, the existing
+# unified_battery_schedule automations remain in charge of the battery --
+# the two must never drive it at the same time.
 #
-# This file is delivered into the container as a Docker Swarm config
-# (see ../docker-compose.yml). The HA token is injected separately from
-# 1Password into /config/secrets.yaml and referenced via !secret.
-# ------------------------------------------------------------------
+# Operational notes:
+#   * mode + set_read_only are ALSO persisted in predbat_config.json on the
+#     cephfs volume, which OVERRIDES this file on restart. After a redeploy,
+#     re-assert via select.predbat_mode + switch.predbat_set_read_only.
+#   * This file is delivered into the container as a Docker Swarm config
+#     (see ../docker-compose.yml). All !secret values (HA token, Solcast API
+#     key, postcode) are injected from 1Password into /config/secrets.yaml
+#     by the entrypoint shim.
+# -----------------------------------------------------------------------------
 ---
 pred_bat:
   module: predbat
@@ -39,47 +42,42 @@ pred_bat:
   notify_devices:
     - dan
 
-  # Predbat computes a full charge/discharge PLAN but never actuates the
-  # battery -- our own HA automation reads the plan and applies it to Enphase.
-  #   - "Control charge & discharge" makes Predbat calculate best charge AND
-  #     export windows. (Monitor mode sets calculate_best_charge=False and
-  #     produces NO schedule, which is useless to us.)
-  #   - set_read_only: True makes the execute phase skip every inverter write
-  #     (execute.py short-circuits on set_read_only), so Predbat commands
-  #     nothing.
-  #   - The ENPHASE inverter also has has_service_api/REST/MQTT all off, so
-  #     there is no actuation path even if read-only were disabled.
-  # Net: a real plan lands in predbat.best_charge_*/best_export_*/plan_html.
+  # --- Mode: plan everything, actuate nothing --------------------------------
+  # "Control charge & discharge" makes Predbat calculate best charge AND
+  # export windows (Monitor mode sets calculate_best_charge=False and
+  # produces no schedule at all, which is useless to us). set_read_only: True
+  # makes the execute phase skip every inverter write (execute.py
+  # short-circuits on it), and the ENPHASE inverter type below has
+  # REST/MQTT/service APIs all off, so there is no actuation path even if
+  # read-only were disabled. Net: a real plan lands in
+  # predbat.best_charge_* / best_export_* / plan_html and nothing is
+  # commanded.
   #
-  # NB control mode fires many concurrent HA history queries. This previously
-  # corrupted the SQLite-on-cephfs recorder; the recorder now runs on Postgres
-  # (see ../docker-compose.yml + home-assistant repo recorder.yaml), which
-  # handles that load.
+  # NB: control mode fires many concurrent HA history queries. This
+  # previously corrupted the SQLite-on-cephfs recorder; the recorder now
+  # runs on Postgres (see ../docker-compose.yml + home-assistant repo
+  # recorder.yaml), which handles that load.
   mode: "Control charge & discharge"
   set_read_only: True
 
-  # --- Energy counters (daily kWh, reset at midnight) -----------------
-  # Topology: 1.2 kWp PV array -> dumb string inverter -> Enphase IQ 5P
-  # (batteries only, NO microinverters). So the ONLY real PV is the small
-  # array, measured by the myenergi generation CT -- NOT the Envoy production
-  # sensor (which reflects battery/AC flows, not this array, and read ~12 kWh
-  # which a 1.2 kWp array cannot produce). pv_today therefore uses the myenergi
-  # generated-today counter, keeping PV actuals consistent with the Solcast
-  # 1.2 kWp forecast (so PV calibration correlates like-for-like once history
-  # accrues).
+  # --- Energy counters (daily kWh, reset at midnight) ------------------------
+  # Topology: 1.2 kWp PV -> dumb string inverter; the Enphase IQ 5P system is
+  # batteries only (NO microinverters). The only real PV is the small array,
+  # measured by the myenergi generation CT -- NOT the Envoy production
+  # sensor, which reflects battery/AC flows (it read ~12 kWh, impossible for
+  # 1.2 kWp). Using the myenergi counter keeps PV actuals consistent with the
+  # Solcast 1.2 kWp forecast, so PV calibration correlates like-for-like once
+  # history accrues.
   #
   # load_today is PURE house load from the Enphase cloud integration
-  # (enphase_envoy_cloud_control). sensor.enphase_battery_enphase_today_consumption
-  # is Enlighten's own daily energy-flow accounting: its state = the "consumption"
-  # bucket (= solar_home + battery_home + grid_home), i.e. house load with battery
-  # charge/discharge already separated out and the car EXCLUDED (the Zappi shows on
-  # the grid CT but not in this consumption figure). total_increasing kWh, resets
-  # at local midnight -- exactly what load_today needs.
-  #
-  # This SUPERSEDES the earlier derived counter (Riemann integration of
-  # predbat_house_load_power -> utility_meter), which was a workaround for the
-  # absence of a pure-house sensor. The Envoy energy_consumption_today is NOT used
-  # here: it bundles battery charging into "consumption".
+  # (enphase_envoy_cloud_control). Its state is Enlighten's daily
+  # "consumption" bucket (= solar_home + battery_home + grid_home): house
+  # load with battery charge/discharge already separated out and the car
+  # EXCLUDED (the Zappi shows on the grid CT but not in this figure).
+  # total_increasing kWh, resets at local midnight -- exactly what load_today
+  # needs. Supersedes the earlier derived counter (Riemann integration of
+  # predbat_house_load_power -> utility_meter). Do NOT use the Envoy's
+  # energy_consumption_today: it bundles battery charging into "consumption".
   load_today:
     - sensor.enphase_battery_enphase_today_consumption
   pv_today:
@@ -90,16 +88,16 @@ pred_bat:
   export_today:
     - sensor.myenergi_myenergi_hub_grid_export_today
 
-  # --- Battery state --------------------------------------------------
+  # --- Battery state ---------------------------------------------------------
   num_inverters: 1
 
-  # Custom "unsupported inverter" definition. Enphase/EcoFlow have no Predbat
-  # control driver, so we declare a type with every control capability off.
-  # This stops Predbat expecting GivEnergy charge-window entities (which would
+  # Custom "unsupported inverter" type: Enphase/EcoFlow have no Predbat
+  # control driver, so declare one with every control capability off. This
+  # stops Predbat expecting GivEnergy charge-window entities (which would
   # otherwise raise "unable to read charge window time"); it auto-creates
-  # dummy entities instead. With no service_api, Predbat tracks charge state
-  # internally and never tries to command the battery -- exactly what Monitor
-  # mode needs.
+  # dummy entities instead. With no service API, Predbat tracks charge state
+  # internally and never tries to command the battery -- exactly what
+  # plan-only operation needs.
   inverter_type: ENPHASE
   inverter:
     name: "ENPHASE"
@@ -128,29 +126,28 @@ pred_bat:
     soc_units: "%"
     write_and_poll_sleep: 2
 
-  # Battery state of charge. We feed SOC as a percentage and let Predbat
-  # derive kWh from soc_max -- cleaner than the Envoy's available-energy
-  # sensor, which reports Wh and would need scaling. (soc_kw is read with
-  # required_unit=kWh so it would auto-convert, but soc_max is NOT, so we set
-  # capacity as a literal kWh below to avoid the Wh-as-kWh trap.)
+  # SOC is fed as a percentage; Predbat derives kWh from soc_max. Cleaner
+  # than the Envoy available-energy sensor, which reports Wh: soc_kw is read
+  # with required_unit=kWh (auto-converts) but soc_max is NOT, so 15000 Wh
+  # would be read as 15000 kWh. Hence the literal capacity below.
   soc_percent:
     - sensor.envoy_122322027694_battery
-  # Total usable capacity in kWh (literal -- 3x Encharge ~= 15 kWh). Do NOT
-  # point this at the Envoy Wh sensor: soc_max has no unit conversion and 15000
-  # would be read as 15000 kWh.
+  # Total usable capacity in kWh (3x Encharge ~15 kWh). Keep as a literal;
+  # do NOT point at the Envoy Wh sensor (see above).
   soc_max:
     - 15.0
 
-  # Live power flows. The Envoy can't see the car and its consumption CT nets
-  # the battery, so we feed Predbat DERIVED sensors (see home-assistant repo
-  # template.yaml): pure house load and true grid (myenergi). Predbat models the
-  # car (Octopus Intelligent) and battery separately.
-  #   pv_power    = myenergi generation CT (the real 1.2 kWp array; consistent
-  #                 with pv_today and the Solcast forecast).
-  #   load_power  = pure house = envoy_consumption - batt_charge + batt_discharge.
-  #   grid_power  = myenergi hub import - export (signed: +import / -export).
-  #   battery_power = battery_total_power (+ve discharge / -ve charge -- already
-  #                 matches Predbat's convention, no invert needed).
+  # --- Live power flows ------------------------------------------------------
+  # The Envoy can't see the car and its consumption CT nets out the battery,
+  # so Predbat gets DERIVED sensors (home-assistant repo template.yaml) and
+  # models the car (Octopus Intelligent) and battery separately:
+  #   pv_power       myenergi generation CT (the real 1.2 kWp array;
+  #                  consistent with pv_today and the Solcast forecast)
+  #   load_power     pure house
+  #                  = envoy_consumption - batt_charge + batt_discharge
+  #   grid_power     myenergi hub import - export (signed: +import / -export)
+  #   battery_power  battery_total_power (+ve discharge / -ve charge --
+  #                  already Predbat's convention, no invert needed)
   pv_power:
     - sensor.myenergi_myenergi_hub_power_generation
   load_power:
@@ -160,140 +157,165 @@ pred_bat:
   battery_power:
     - sensor.battery_total_power
 
-  # --- PV forecast (Solcast cloud, direct) ----------------------------
-  # Predbat polls the Solcast hobbyist API itself (no HA integration). It
+  # --- PV forecast (Solcast cloud, direct) -----------------------------------
+  # Predbat polls the Solcast hobbyist API itself (no HA integration): it
   # auto-discovers the registered rooftop site(s) from the API key and pulls
-  # the half-hourly pv_estimate forecast that the plan needs. Forecast.Solar's
-  # daily-total sensors lack the half-hourly attribute Predbat requires, hence
-  # Solcast. The site here is ~1.2 kWp (small array). solcast_poll_hours: 8 =>
-  # ~3 polls/day, within the free tier's ~10 calls/day. The API key is injected
-  # from 1Password (SOLCAST_API_TOKEN) into /config/secrets.yaml by the
-  # entrypoint shim (see ../docker-compose.yml) and referenced via !secret.
-  # NB pv_power (live W, above) is the CURRENT generation; Solcast is the
-  # forward forecast -- they are complementary.
+  # the half-hourly pv_estimate forecast the plan needs (Forecast.Solar's
+  # daily-total sensors lack that attribute). The site is the ~1.2 kWp array.
+  # solcast_poll_hours: 8 => ~3 polls/day, within the free tier's ~10
+  # calls/day. Live pv_power (above) is CURRENT generation; Solcast is the
+  # forward forecast -- complementary.
   #
-  # KNOWN ISSUE (transient): Predbat's PV Calibration (solcast.py pv_calibration)
-  # correlates the Solcast forecast against pv_today ACTUALS history. With the
-  # freshly-rebuilt Postgres DB it has <3 days of pv_today history and hits an
-  # upstream None-subtraction bug (solcast.py:943, present on main too), which
-  # aborts fetch_pv_forecast before the forecast is stored -- so pv_energy stays
-  # low and the log shows a recurring traceback. This is EXPECTED and self-heals
-  # once ~3 days of real pv_today history accrue (same as the load model). The
-  # crash is caught by Predbat's task wrapper and does not affect the main plan.
+  # KNOWN ISSUE (transient, self-heals): PV Calibration (solcast.py
+  # pv_calibration) correlates the forecast against pv_today actuals. With
+  # the freshly rebuilt Postgres DB there is <3 days of history, which trips
+  # an upstream None-subtraction bug (solcast.py:943, present on main too)
+  # that aborts fetch_pv_forecast before the forecast is stored -- pv_energy
+  # stays low and the log shows a recurring traceback. Expected until ~3 days
+  # of real pv_today history accrue (same as the load model); the crash is
+  # caught by Predbat's task wrapper and does not affect the main plan.
   # metric_pv_calibration_enable does NOT prevent it (the crashing loop runs
-  # regardless). Do not treat the recurring SolarAPI traceback as a wiring error.
+  # regardless). Do not treat the recurring SolarAPI traceback as a wiring
+  # error.
   solcast_host: "https://api.solcast.com.au/"
   solcast_api_key: !secret solcast_api_key
   solcast_poll_hours: 8
 
-  # --- Carbon intensity (National Grid API, direct) -------------------
-  # Predbat fetches grid carbon intensity gCO2/kWh directly from the
-  # National Grid API using the registered postcode. This creates
+  # --- Carbon intensity (National Grid API, direct) --------------------------
+  # Fetched directly (gCO2/kWh) for the registered postcode; creates
   # sensor.predbat_carbon_intensity. carbon_enable shows carbon in the plan;
-  # set carbon_metric > 0 to weight carbon into charge/dispatch decisions.
-  # Postcode is a !secret (from 1Password via the entrypoint shim)
-  # -- see ../docker-compose.yml.
+  # set carbon_metric > 0 to also weight carbon into charge/dispatch
+  # decisions.
   carbon_postcode: !secret postcode
-  carbon_automatic: true
+  carbon_automatic: True
   carbon_enable: True
 
-  # --- Inverter physical limits ---------------------------------------
-  # 3x Encharge ~ 15 kWh usable; ~9.6 kW combined (matches battery_power_rate_kw).
-  # battery_rate_max is the key Predbat reads for a non-REST custom inverter;
-  # battery_rate_max_charge/discharge are NOT read on this path. Watts.
+  # --- Physical limits & losses ----------------------------------------------
+  # 3x Encharge: ~15 kWh usable, ~9.6 kW combined. battery_rate_max is the
+  # key Predbat reads for a non-REST custom inverter
+  # (battery_rate_max_charge/discharge are NOT read on this path). Watts.
   inverter_limit: 9600
   battery_rate_max: 9600
   inverter_battery_rate_min: 100
 
-  # AC-coupled system: the Enphase battery (Encharge) and the PV array are
-  # separate AC devices, NOT a DC-coupled hybrid inverter. inverter_hybrid
-  # defaults to True; set False so the prediction models PV as AC (no shared
-  # DC bus / DC-side clipping math). Low practical impact here (1.2 kWp array
-  # is far below the 9.6 kW limit, so PV never clips), but correct for the
-  # topology.
+  # AC-coupled: the Encharge battery and the PV array are separate AC
+  # devices, not a DC-coupled hybrid. inverter_hybrid defaults to True; set
+  # False so the prediction models PV as AC (no shared-DC-bus clipping math).
+  # Low practical impact (1.2 kWp never approaches the 9.6 kW limit) but
+  # correct for the topology.
   inverter_hybrid: False
 
   reserve: 0
 
-  # ENPHASE custom inverter type has has_reserve_soc: False, which forces
+  # The ENPHASE type has has_reserve_soc: False, which forces
   # set_reserve_enable: False and set_discharge_during_charge: True in
-  # execute.py. battery_min_soc sets the simulation reserve floor; the
-  # Enphase battery has a hardcoded 5% physical minimum that cannot be
-  # discharged below.
+  # execute.py. battery_min_soc is the simulation reserve floor; the Enphase
+  # battery has a hardcoded 5% physical minimum it cannot discharge below.
   battery_min_soc: 5
 
-  # Battery round-trip losses as a fraction (0.05 = 5% loss = 95% efficient).
-  # NB: Predbat inverts these at load time (1.0 - config_value), so "0.95"
-  # would be interpreted as 95% LOSS → 5% efficiency → 20x discharge amp.
+  # Round-trip losses as a FRACTIONAL LOSS (0.05 = 5% loss = 95% efficient).
+  # Predbat inverts these at load time (1.0 - value): writing "0.95" would
+  # mean 95% LOSS -> 5% efficiency -> ~20x discharge amplification.
   battery_loss: 0.05
   battery_loss_discharge: 0.05
-  # Inverter loss is also inverted upstream; 0.03 = 3% loss = 97% efficient
-  inverter_loss: 0.03
+  inverter_loss: 0.03 # 3% loss = 97% efficient (same inversion applies)
 
-  # --- Octopus Energy rates (BottlecapDave integration) ---------------
+  # --- Octopus Energy rates (BottlecapDave integration) ----------------------
   metric_octopus_import: "sensor.octopus_energy_electricity_15p0706167_2000050773706_current_rate"
   metric_octopus_export: "sensor.octopus_energy_electricity_15p0706167_2000060833200_export_current_rate"
-  # Octopus Intelligent dispatch slot sensor. Points at our filtered template
-  # sensor (binary_sensor.octopus_intelligent_dispatching_filtered) which blanks
-  # planned_dispatches when smart charge is off — see template.yaml in the
-  # home-assistant repo. Without this filter, Predbat reads stale planned
-  # dispatches from Octopus's API (which returns them even when smart charge is
-  # disabled) and overrides import rates to off-peak via rate_add_io_slots,
-  # causing the battery to plan discharging before phantom cheap windows.
-  octopus_intelligent_slot: "binary_sensor.octopus_intelligent_dispatching_filtered"
+  metric_standing_charge: "sensor.octopus_energy_electricity_15p0706167_2000050773706_current_standing_charge"
   octopus_saving_session: "re:(event.octopus_energy_([0-9a-z_]+|)_octoplus_saving_session_events)"
   octopus_free_session: "re:(event.octopus_energy_([0-9a-z_]+|)_octoplus_free_electricity_session_events)"
-  metric_standing_charge: "sensor.octopus_energy_electricity_15p0706167_2000050773706_current_standing_charge"
 
-  # Override overnight export rate to 0 so Predbat doesn't micro-cycle:
-  # charging at 3.99p then exporting at ~10p looks profitable, but supplier
-  # terms discourage importing just to re-export. With export at 0, the plan
+  # Octopus Intelligent dispatch slots, via our FILTERED template sensor
+  # (template.yaml in the home-assistant repo), which blanks
+  # planned_dispatches while smart charge is off. Octopus's API returns
+  # planned dispatches even when smart charge is disabled; fed raw, Predbat
+  # overrides import rates to off-peak via rate_add_io_slots and plans
+  # battery discharge ahead of phantom cheap windows.
+  octopus_intelligent_slot: "binary_sensor.octopus_intelligent_dispatching_filtered"
+
+  # octopus_slot_max is intentionally UNSET (default 48 = disabled). The
+  # Predbat docs warn that from March 2026 Octopus may cap IOG cheap slots to
+  # 6h/day, in which case set it to 12. As of Jul 2026 the cap is NOT in
+  # force on this account (confirmed via the Octopus app); setting it
+  # prematurely would clip slots Octopus is still granting and starve the
+  # car's overnight charge. Re-check before adding.
+  #
+  # octopus_ready_time / octopus_charge_limit are intentionally NOT wired.
+  # Under Octopus-led charging (the ID3 is enrolled on IOG and
+  # switch.predbat_octopus_intelligent_charging is on), Predbat never calls
+  # plan_car_charging (fetch.py:1115-1121 short-circuits the IOG car branch),
+  # so octopus_ready_time -> car_charging_plan_time has no consumer.
+  # octopus_charge_limit only caps car_charging_limit, which bounds per-slot
+  # car fill (prediction.py:709) -- but Octopus's planned_dispatches (read
+  # via octopus_intelligent_slot, decoded by load_octopus_slots at
+  # fetch.py:1260) already encode the target SoC and schedule only the energy
+  # needed to reach it. Both are overrides for when you don't trust Octopus's
+  # plan (e.g. you lowered the cap in the app after the last refresh); in
+  # steady state they add nothing. car_charging_battery_size /
+  # car_charging_soc are skipped for the same reason: Octopus's scheduler
+  # models the EV pack without our help.
+
+  # Kept for reference: zero overnight export so Predbat doesn't micro-cycle.
+  # Charging at 3.99p then exporting at ~10p looks profitable, but supplier
+  # terms discourage importing just to re-export; with export at 0 the plan
   # charges once per cheap window and holds for the day.
   # rates_export_override:
   #   - start: "23:30:00"
   #     end: "05:30:00"
   #     rate: 0
 
-  # --- Car (EV on a myenergi Zappi) -----------------------------------
-  # The car charges on a separate circuit the Envoy can't see, but it DOES
-  # appear in the myenergi true-grid CT and (historically) in load. Predbat
-  # models the car separately, so we must strip car charging from the load
-  # history -- otherwise the ~1.9 kW car (≈0.95 kWh/30min) inflates the house
-  # load forecast.
+  # --- Car (EV on a myenergi Zappi) ------------------------------------------
+  # The car charges on a circuit the Envoy can't see, but it DOES appear in
+  # the myenergi true-grid CT and (historically) in load. Predbat models the
+  # car separately, so car charging must be stripped from load history --
+  # otherwise the ~1.9 kW car (~0.95 kWh/30min) inflates the house forecast.
   #
   # car_charging_hold + car_charging_energy = PRECISE subtraction: Predbat
-  # diffs the incrementing Zappi session counter and removes exactly the car's
-  # energy from each historical minute (fetch.py get_from_incrementing handles
-  # the per-session reset to 0). Without car_charging_energy, hold falls back to
-  # a crude 6 kWh/30min THRESHOLD that never catches a 1.9 kW car -> car load
-  # leaks into the forecast. The sample apps.yaml's auto-match regex does NOT
-  # fit this Zappi's entity name (no numeric id segment), so we set it explicitly.
+  # diffs the incrementing Zappi session counter and removes exactly the
+  # car's energy from each historical minute (fetch.py get_from_incrementing
+  # handles the per-session reset to 0). Without car_charging_energy, hold
+  # falls back to a crude 6 kWh/30min threshold that never catches a 1.9 kW
+  # car, and car load leaks into the forecast. The sample apps.yaml
+  # auto-match regex does not fit this Zappi's entity name (no numeric id
+  # segment), so it is set explicitly.
   num_cars: 1
   car_charging_hold: True
   car_charging_energy: "sensor.myenergi_zappi_charge_added_session"
-  # Plug status -> whether the car will charge in upcoming cheap slots. Octopus
-  # Intelligent dispatch (octopus_intelligent_slot, above) takes priority when active.
-  # Two EVs share this Zappi; only one is on Octopus Intelligent, but both can
-  # charge during cheap slots, so the plug status is the right signal here.
+
+  # Plug status -> will the car charge in upcoming cheap slots? Octopus
+  # Intelligent dispatch (octopus_intelligent_slot, above) takes priority
+  # when active. Two EVs share this Zappi and only one is on IOG, but both
+  # charge during cheap slots, so plug status is the right signal.
   car_charging_planned:
     - "sensor.myenergi_zappi_plug_status"
+  # Zappi states that count as "plugged in and will charge when cheap" --
+  # the EXACT set of positive states this Zappi has reported (verified via
+  # HA history, Apr-Jul 2026). Matching is case-insensitive but EXACT
+  # (fetch.py:1930,1939 lowercases both sides, then `in` list): a partial
+  # like "waiting" will NOT match "Waiting for EV".
+  #
+  # Observed states: Charging, EV Connected, Waiting for EV -> positive
+  #                  EV Disconnected, unavailable            -> excluded
+  #
+  # "Waiting for EV" is the meaningful entry: it is the state while plugged
+  # in but held for the next cheap slot. Without it, Predbat saw "not
+  # planned" through much of each overnight cycle and could ignore future
+  # IOG slots.
   car_charging_planned_response:
-    - "on"
-    - "yes"
-    - "true"
-    - "connected"
-    - "ev connected"
     - "charging"
-    - "boosting"
-    - "waiting for export"
+    - "ev connected"
+    - "waiting for ev"
 
-  # Weighted-bucket load forecast: uses all history within a rolling window,
-  # weighted by recency (0.9^days), day-of-week similarity, and holiday state.
-  # More robust than a fixed N-day average when patterns shift or gaps exist.
-  # Window defaults to 7 days (max 30). Overrides the old days_previous list.
+  # --- Load forecast & horizon -----------------------------------------------
+  # Weighted-bucket load forecast: all history within a rolling window
+  # (default 7 days, max 30), weighted by recency (0.9^days), day-of-week
+  # similarity and holiday state. More robust than a fixed N-day average when
+  # patterns shift or gaps exist; replaces the old days_previous list.
   days_previous_auto: True
-  forecast_hours: 48 # plan horizon: 48 hours ahead
+  forecast_hours: 48 # plan horizon
 
-  # Enable expert mode — exposes additional tuning entities (metric weights,
-  # min improvements, manual adjustments, etc.).
+  # Expert mode exposes extra tuning entities (metric weights, min
+  # improvements, manual adjustments, ...).
   expert_mode: True
