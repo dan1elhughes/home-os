@@ -1,0 +1,9 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "references": {
+    "predbat": {
+      "repository": "springfall2008/batpred",
+      "description": "Predbat source. Use when investigating Predbat behaviour, config options, plan logic, or how it interacts with the home-os battery/car-charging setup."
+    }
+  }
+}
