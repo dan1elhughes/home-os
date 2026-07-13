@@ -227,13 +227,21 @@ pred_bat:
   octopus_saving_session: "re:(event.octopus_energy_([0-9a-z_]+|)_octoplus_saving_session_events)"
   octopus_free_session: "re:(event.octopus_energy_([0-9a-z_]+|)_octoplus_free_electricity_session_events)"
 
-  # Octopus Intelligent dispatch slots, via our FILTERED template sensor
-  # (template.yaml in the home-assistant repo), which blanks
-  # planned_dispatches while smart charge is off. Octopus's API returns
-  # planned dispatches even when smart charge is disabled; fed raw, Predbat
-  # overrides import rates to off-peak via rate_add_io_slots and plans
-  # battery discharge ahead of phantom cheap windows.
-  octopus_intelligent_slot: "binary_sensor.octopus_intelligent_dispatching_filtered"
+  # Per-car Octopus Intelligent dispatching sensors, matching num_cars: 2
+  # (see the multi-car IOG section of the Predbat car-charging docs). We
+  # point at BottlecapDave's per-device intelligent_dispatching sensors
+  # directly -- no filtered template wrapper. Octopus's API does return
+  # planned_dispatches even when a car's smart-charge switch is off, which
+  # can make Predbat plan battery discharge before phantom cheap windows
+  # via rate_add_io_slots; we accept that trade-off for simplicity and keep
+  # smart-charge on for whichever car we want planned.
+  #
+  # Car 0 = VW ID.3 (provider VOLKSWAGEN, OEM integration, ...08191c).
+  # Car 1 = Renault Zoe (provider JEDLIX_V2, ...11612f).
+  # Both cars charge on the one Zappi -- see car_charging_exclusive.
+  octopus_intelligent_slot:
+    - "binary_sensor.octopus_energy_00000000_0002_4000_8020_00000008191c_intelligent_dispatching"
+    - "binary_sensor.octopus_energy_00000000_0002_4000_8020_00000011612f_intelligent_dispatching"
 
   # octopus_slot_max is intentionally UNSET (default 48 = disabled). The
   # Predbat docs warn that from March 2026 Octopus may cap IOG cheap slots to
@@ -243,7 +251,7 @@ pred_bat:
   # car's overnight charge. Re-check before adding.
   #
   # octopus_ready_time / octopus_charge_limit are intentionally NOT wired.
-  # Under Octopus-led charging (the ID3 is enrolled on IOG and
+  # Under Octopus-led charging (both cars are enrolled on IOG and
   # switch.predbat_octopus_intelligent_charging is on), Predbat never calls
   # plan_car_charging (fetch.py:1115-1121 short-circuits the IOG car branch),
   # so octopus_ready_time -> car_charging_plan_time has no consumer.
@@ -266,11 +274,12 @@ pred_bat:
   #     end: "05:30:00"
   #     rate: 0
 
-  # --- Car (EV on a myenergi Zappi) ------------------------------------------
-  # The car charges on a circuit the Envoy can't see, but it DOES appear in
-  # the myenergi true-grid CT and (historically) in load. Predbat models the
-  # car separately, so car charging must be stripped from load history --
-  # otherwise the ~1.9 kW car (~0.95 kWh/30min) inflates the house forecast.
+  # --- Cars (two EVs on a shared myenergi Zappi, both on IOG) ----------------
+  # Both cars charge on the same Zappi circuit the Envoy can't see, but it
+  # DOES appear in the myenergi true-grid CT and (historically) in load.
+  # Predbat models each car separately so car charging must be stripped from
+  # load history -- otherwise the ~1.9 kW car (~0.95 kWh/30min) inflates the
+  # house forecast.
   #
   # car_charging_hold + car_charging_energy = PRECISE subtraction: Predbat
   # diffs the incrementing Zappi session counter and removes exactly the
@@ -280,15 +289,32 @@ pred_bat:
   # car, and car load leaks into the forecast. The sample apps.yaml
   # auto-match regex does not fit this Zappi's entity name (no numeric id
   # segment), so it is set explicitly.
-  num_cars: 1
+  #
+  # car_charging_energy is a SINGLE sensor (not per-car): both cars share the
+  # one Zappi, so its session counter is site-wide and one subtraction covers
+  # whichever vehicle is plugged in. Per the Predbat multi-car-IOG docs, only
+  # octopus_intelligent_slot / octopus_ready_time / octopus_charge_limit /
+  # car_charging_planned / car_charging_exclusive need per-car entries.
+  num_cars: 2
+  # We have one charger shared between two cars, so only one may charge at a
+  # time. Predbat treats the first car reporting as plugged in as the one
+  # charging and won't plan the other.
+  car_charging_exclusive:
+    - True
+    - True
   car_charging_hold: True
   car_charging_energy: "sensor.myenergi_zappi_charge_added_session"
 
   # Plug status -> will the car charge in upcoming cheap slots? Octopus
   # Intelligent dispatch (octopus_intelligent_slot, above) takes priority
-  # when active. Two EVs share this Zappi and only one is on IOG, but both
-  # charge during cheap slots, so plug status is the right signal.
+  # when active. Two EVs share this one Zappi; with both on IOG, the Zappi
+  # plug status is the "is *a* car plugged in" signal. We list the same
+  # sensor for both cars -- car_charging_exclusive above tells Predbat only
+  # one charges at once, and Octopus's per-car planned_dispatches is the
+  # authoritative source for which car actually gets energy. car_charging_slots
+  # [car_n] ends up empty for whichever car has no upcoming IOG dispatch.
   car_charging_planned:
+    - "sensor.myenergi_zappi_plug_status"
     - "sensor.myenergi_zappi_plug_status"
   # Zappi states that count as "plugged in and will charge when cheap" --
   # the EXACT set of positive states this Zappi has reported (verified via
