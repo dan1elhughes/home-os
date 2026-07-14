@@ -49,7 +49,7 @@ pred_bat:
   # Enphase Enlighten Cloud credentials (password-only, no MFA).
   enphase_username: !secret enphase_username
   enphase_password: !secret enphase_password
-  enphase_automatic: True
+  enphase_automatic: False
   # Our PV is on a dumb string inverter measured by myenergi, not Enphase
   # microinverters. Don't let the Enphase Cloud overwrite pv_power/pv_today.
   enphase_automatic_ignore_pv: True
@@ -62,64 +62,59 @@ pred_bat:
   # 1.2 kWp). Using the myenergi counter keeps PV actuals consistent with the
   # Solcast 1.2 kWp forecast, so PV calibration correlates like-for-like once
   # history accrues.
-  #
-  # load_today is PURE house load from the Enphase cloud integration
-  # (enphase_envoy_cloud_control). Its state is Enlighten's daily
-  # "consumption" bucket (= solar_home + battery_home + grid_home): house
-  # load with battery charge/discharge already separated out and the car
-  # EXCLUDED (the Zappi shows on the grid CT but not in this figure).
-  # total_increasing kWh, resets at local midnight -- exactly what load_today
-  # needs. Supersedes the earlier derived counter (Riemann integration of
-  # predbat_house_load_power -> utility_meter). Do NOT use the Envoy's
-  # energy_consumption_today: it bundles battery charging into "consumption".
+  # --- Battery state & EnphaseCloud entity wiring ---------------------------
+  num_inverters: 1
+  inverter_type: EnphaseCloud
+
+  # --- Daily totals (myenergi for import/export/PV, Enphase for load) --------
   load_today:
-    - sensor.enphase_battery_enphase_today_consumption
-  pv_today:
-    - sensor.myenergi_myenergi_hub_generated_today
-  # Grid import/export from the myenergi hub (clean daily counters).
+    - sensor.predbat_enphase_5886607_load_today
   import_today:
     - sensor.myenergi_myenergi_hub_grid_import_today
   export_today:
     - sensor.myenergi_myenergi_hub_grid_export_today
 
-  # --- Battery state ---------------------------------------------------------
-  num_inverters: 1
+  # PV (override: our PV is on myenergi, not Enphase)
+  pv_today:
+    - sensor.myenergi_myenergi_hub_generated_today
+  pv_power:
+    - sensor.myenergi_myenergi_hub_power_generation
 
-  # EnphaseCloud inverter type — Predbat writes CFG/DTG schedules directly
-  # to the Enlighten Cloud API. The enphase_automatic flag above auto-wires
-  # all sensor and control entities from the Enphase component.
-  inverter_type: EnphaseCloud
-
-  # SOC is fed as a percentage; Predbat derives kWh from soc_max. Cleaner
-  # than the Envoy available-energy sensor, which reports Wh: soc_kw is read
-  # with required_unit=kWh (auto-converts) but soc_max is NOT, so 15000 Wh
-  # would be read as 15000 kWh. Hence the literal capacity below.
+  # SOC (override: local Envoy is real-time, Enphase Cloud lags)
   soc_percent:
     - sensor.envoy_122322027694_battery
-  # Total usable capacity in kWh (3x Encharge ~15 kWh). Keep as a literal;
-  # do NOT point at the Envoy Wh sensor (see above).
   soc_max:
     - 15.0
 
-  # --- Live power flows ------------------------------------------------------
-  # The Envoy can't see the car and its consumption CT nets out the battery,
-  # so Predbat gets DERIVED sensors (home-assistant repo template.yaml) and
-  # models the car (Octopus Intelligent) and battery separately:
-  #   pv_power       myenergi generation CT (the real 1.2 kWp array;
-  #                  consistent with pv_today and the Solcast forecast)
-  #   load_power     pure house
-  #                  = envoy_consumption - batt_charge + batt_discharge
-  #   grid_power     myenergi hub import - export (signed: +import / -export)
-  #   battery_power  battery_total_power (+ve discharge / -ve charge --
-  #                  already Predbat's convention, no invert needed)
-  pv_power:
-    - sensor.myenergi_myenergi_hub_power_generation
-  load_power:
-    - sensor.predbat_house_load_power
-  grid_power:
-    - sensor.predbat_grid_power
+  # Live power flows (overrides: derived sensors strip car from load)
   battery_power:
     - sensor.battery_total_power
+  grid_power:
+    - sensor.predbat_grid_power
+  load_power:
+    - sensor.predbat_house_load_power
+
+  # EnphaseCloud control entities (needed for Predbat to write schedules)
+  inverter_time:
+    - sensor.predbat_enphase_5886607_inverter_time
+  charge_start_time:
+    - select.predbat_enphase_5886607_battery_schedule_charge_start_time
+  charge_end_time:
+    - select.predbat_enphase_5886607_battery_schedule_charge_end_time
+  charge_limit:
+    - number.predbat_enphase_5886607_battery_schedule_charge_soc
+  scheduled_charge_enable:
+    - switch.predbat_enphase_5886607_battery_schedule_charge_enable
+  scheduled_discharge_enable:
+    - switch.predbat_enphase_5886607_battery_schedule_export_enable
+  discharge_start_time:
+    - select.predbat_enphase_5886607_battery_schedule_export_start_time
+  discharge_end_time:
+    - select.predbat_enphase_5886607_battery_schedule_export_end_time
+  discharge_target_soc:
+    - number.predbat_enphase_5886607_battery_schedule_export_soc
+  schedule_write_button:
+    - switch.predbat_enphase_5886607_battery_schedule_charge_write
 
   # --- PV forecast (Solcast cloud, direct) -----------------------------------
   # Predbat polls the Solcast hobbyist API itself (no HA integration): it
@@ -155,26 +150,17 @@ pred_bat:
   carbon_enable: True
 
   # --- Physical limits & losses ----------------------------------------------
-  # 3x Encharge: ~15 kWh usable, ~9.6 kW combined. battery_rate_max is the
-  # key Predbat reads for a non-REST custom inverter
-  # (battery_rate_max_charge/discharge are NOT read on this path). Watts.
+  # 3x Encharge: ~15 kWh usable, ~9.6 kW combined. Watts.
   inverter_limit: 9600
   battery_rate_max: 9600
   inverter_battery_rate_min: 100
 
   # AC-coupled: the Encharge battery and the PV array are separate AC
-  # devices, not a DC-coupled hybrid. inverter_hybrid defaults to True; set
-  # False so the prediction models PV as AC (no shared-DC-bus clipping math).
-  # Low practical impact (1.2 kWp never approaches the 9.6 kW limit) but
-  # correct for the topology.
+  # devices, not a DC-coupled hybrid.
   inverter_hybrid: False
 
   reserve: 0
 
-  # The ENPHASE type has has_reserve_soc: False, which forces
-  # set_reserve_enable: False and set_discharge_during_charge: True in
-  # execute.py. battery_min_soc is the simulation reserve floor; the Enphase
-  # battery has a hardcoded 5% physical minimum it cannot discharge below.
   battery_min_soc: 5
 
   # Round-trip losses as a FRACTIONAL LOSS (0.05 = 5% loss = 95% efficient).
