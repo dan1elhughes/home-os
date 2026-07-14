@@ -45,6 +45,8 @@ pred_bat:
   # (predbat_control.yaml) must be disabled while this is active.
   mode: "Control charge & discharge"
   set_read_only: False
+  set_charge_freeze: False  # allow battery to charge freely without FrzChrg blocks
+  set_export_freeze: False  # allow battery to export freely without FrzExp blocks
 
   # Enphase Enlighten Cloud credentials (password-only, no MFA).
   enphase_username: !secret enphase_username
