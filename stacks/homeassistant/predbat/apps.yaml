@@ -4,13 +4,10 @@
 # Hardware: Enphase Envoy + 3x Encharge (~15 kWh), 1.2 kWp PV on a dumb
 # string inverter, myenergi Zappi, Octopus Intelligent Go tariff.
 #
-# Predbat cannot natively control Enphase/EcoFlow, so it runs in "Control
-# charge & discharge" to CALCULATE a full charge/export plan, while
-# set_read_only: True stops the execute phase issuing any control commands.
-# A separate HA automation ("Enphase control v2") reads the plan and applies
-# it to the Enphase battery. Until v2 takes over, the existing
-# unified_battery_schedule automations remain in charge of the battery --
-# the two must never drive it at the same time.
+# Predbat controls the Enphase battery directly via the Enlighten Cloud API
+# (EnphaseCloud inverter type). It writes charge/export windows that the
+# Enphase gateway executes. The HA automation (predbat_control.yaml) must
+# NOT write schedules while Predbat is self-managing -- disable it.
 #
 # Operational notes:
 #   * mode + set_read_only are ALSO persisted in predbat_config.json on the
@@ -18,8 +15,8 @@
 #     re-assert via select.predbat_mode + switch.predbat_set_read_only.
 #   * This file is delivered into the container as a Docker Swarm config
 #     (see ../docker-compose.yml). All !secret values (HA token, Solcast API
-#     key, postcode) are injected from 1Password into /config/secrets.yaml
-#     by the entrypoint shim.
+#     key, postcode, enphase creds) are injected from 1Password into
+#     /config/secrets.yaml by the entrypoint shim.
 # -----------------------------------------------------------------------------
 ---
 pred_bat:
@@ -42,23 +39,20 @@ pred_bat:
   notify_devices:
     - dan
 
-  # --- Mode: plan everything, actuate nothing --------------------------------
-  # "Control charge & discharge" makes Predbat calculate best charge AND
-  # export windows (Monitor mode sets calculate_best_charge=False and
-  # produces no schedule at all, which is useless to us). set_read_only: True
-  # makes the execute phase skip every inverter write (execute.py
-  # short-circuits on it), and the ENPHASE inverter type below has
-  # REST/MQTT/service APIs all off, so there is no actuation path even if
-  # read-only were disabled. Net: a real plan lands in
-  # predbat.best_charge_* / best_export_* / plan_html and nothing is
-  # commanded.
-  #
-  # NB: control mode fires many concurrent HA history queries. This
-  # previously corrupted the SQLite-on-cephfs recorder; the recorder now
-  # runs on Postgres (see ../docker-compose.yml + home-assistant repo
-  # recorder.yaml), which handles that load.
+  # --- Mode: plan and execute via Enphase Cloud ------------------------------
+  # Predbat calculates the full plan and writes charge/export windows directly
+  # to the Enphase battery via the Enlighten Cloud API. The HA automation
+  # (predbat_control.yaml) must be disabled while this is active.
   mode: "Control charge & discharge"
-  set_read_only: True
+  set_read_only: False
+
+  # Enphase Enlighten Cloud credentials (password-only, no MFA).
+  enphase_username: !secret enphase_username
+  enphase_password: !secret enphase_password
+  enphase_automatic: True
+  # Our PV is on a dumb string inverter measured by myenergi, not Enphase
+  # microinverters. Don't let the Enphase Cloud overwrite pv_power/pv_today.
+  enphase_automatic_ignore_pv: True
 
   # --- Energy counters (daily kWh, reset at midnight) ------------------------
   # Topology: 1.2 kWp PV -> dumb string inverter; the Enphase IQ 5P system is
@@ -91,40 +85,10 @@ pred_bat:
   # --- Battery state ---------------------------------------------------------
   num_inverters: 1
 
-  # Custom "unsupported inverter" type: Enphase/EcoFlow have no Predbat
-  # control driver, so declare one with every control capability off. This
-  # stops Predbat expecting GivEnergy charge-window entities (which would
-  # otherwise raise "unable to read charge window time"); it auto-creates
-  # dummy entities instead. With no service API, Predbat tracks charge state
-  # internally and never tries to command the battery -- exactly what
-  # plan-only operation needs.
-  inverter_type: ENPHASE
-  inverter:
-    name: "ENPHASE"
-    has_rest_api: False
-    has_mqtt_api: False
-    has_service_api: False
-    output_charge_control: "none"
-    charge_control_immediate: False
-    has_charge_enable_time: False
-    has_discharge_enable_time: False
-    has_target_soc: False
-    has_reserve_soc: False
-    has_timed_pause: False
-    time_button_press: False
-    support_charge_freeze: False
-    support_discharge_freeze: False
-    has_ge_inverter_mode: False
-    has_fox_inverter_mode: False
-    has_idle_time: False
-    has_time_window: False
-    charge_time_format: "H:M-H:M"
-    charge_time_entity_is_option: False
-    can_span_midnight: False
-    clock_time_format: "%Y-%m-%d %H:%M:%S"
-    num_load_entities: 1
-    soc_units: "%"
-    write_and_poll_sleep: 2
+  # EnphaseCloud inverter type — Predbat writes CFG/DTG schedules directly
+  # to the Enlighten Cloud API. The enphase_automatic flag above auto-wires
+  # all sensor and control entities from the Enphase component.
+  inverter_type: EnphaseCloud
 
   # SOC is fed as a percentage; Predbat derives kWh from soc_max. Cleaner
   # than the Envoy available-energy sensor, which reports Wh: soc_kw is read
