@@ -84,7 +84,7 @@ pred_bat:
   soc_percent:
     - sensor.envoy_122322027694_battery
   soc_max:
-    - 15.0
+    - 15.0  # 3x Encharge ~15 kWh usable capacity
 
   # Live power flows (overrides: derived sensors strip car from load)
   battery_power:
