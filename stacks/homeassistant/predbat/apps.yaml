@@ -68,7 +68,7 @@ pred_bat:
 
   # --- Daily totals (myenergi for import/export/PV, Enphase for load) --------
   load_today:
-    - sensor.predbat_enphase_5886607_load_today
+    - sensor.enphase_battery_enphase_today_consumption
   import_today:
     - sensor.myenergi_myenergi_hub_grid_import_today
   export_today:
