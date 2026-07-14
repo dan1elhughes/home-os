@@ -192,7 +192,7 @@ pred_bat:
   # Car 1 = Renault Zoe (provider JEDLIX_V2, ...11612f).
   # Both cars charge on the one Zappi -- see car_charging_exclusive.
   octopus_intelligent_slot:
-    - "binary_sensor.octopus_energy_00000000_0002_4000_8020_00000008191c_intelligent_dispatching"
+    - "binary_sensor.octopus_intelligent_dispatching_filtered"
     - "binary_sensor.octopus_energy_00000000_0002_4000_8020_00000011612f_intelligent_dispatching"
 
   # octopus_slot_max is intentionally UNSET (default 48 = disabled). The
