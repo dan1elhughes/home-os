@@ -1,0 +1,136 @@
+services:
+  # --- Immich Server ---
+  immich-server:
+    image: ghcr.io/immich-app/immich-server:v3.0.3
+    user: "3000:3000"
+    environment:
+      DB_HOSTNAME: immich-postgres
+      DB_USERNAME: immich
+      DB_PASSWORD: immich
+      DB_DATABASE_NAME: immich
+      DB_PORT: "5432"
+      REDIS_HOSTNAME: immich-redis
+      REDIS_PASSWORD: immich
+      UPLOAD_LOCATION: /data
+    volumes:
+      - photos:/mnt/photos
+      - uploads:/data
+    deploy:
+      labels:
+        - "traefik.enable=true"
+        - "traefik.http.routers.photos.rule=Host(`photos.danhughes.dev`)"
+        - "traefik.http.routers.photos.entrypoints=websecure"
+        - "traefik.http.routers.photos.tls=true"
+        - "traefik.http.routers.photos.tls.certResolver=letsencrypt"
+        - "traefik.http.services.photos.loadbalancer.server.port=2283"
+        - "traefik.swarm.network=main"
+        - "kuma.photos.http.name=Immich"
+        - "kuma.photos.http.url=https://photos.danhughes.dev/api/server/ping"
+      replicas: 1
+    networks:
+      - main
+
+  # --- Machine Learning (OpenVINO, GPU ×3) ---
+  immich-machine-learning:
+    image: ghcr.io/immich-app/immich-machine-learning:v3.0.3-openvino
+    volumes:
+      - ml-cache:/cache
+    devices:
+      - /dev/dri:/dev/dri
+    deploy:
+      mode: global
+      labels:
+        - "traefik.enable=false"
+    networks:
+      - main
+
+  # --- Postgres ---
+  immich-postgres:
+    image: ghcr.io/immich-app/postgres:18-vectorchord0.5.3
+    environment:
+      POSTGRES_PASSWORD: immich
+      POSTGRES_USER: immich
+      POSTGRES_DB: immich
+      POSTGRES_INITDB_ARGS: "--data-checksums"
+    volumes:
+      - pgdata:/var/lib/postgresql
+    deploy:
+      labels:
+        - "traefik.enable=false"
+      placement:
+        constraints: [node.role == manager]
+    networks:
+      - main
+
+  # --- Redis ---
+  immich-redis:
+    image: valkey/valkey:9.1.0
+    command: valkey-server --requirepass immich
+    deploy:
+      labels:
+        - "traefik.enable=false"
+      placement:
+        constraints: [node.role == manager]
+    networks:
+      - main
+
+  # --- Immich Public Proxy ---
+  ipp:
+    image: alangrainger/immich-public-proxy:latest
+    environment:
+      IMMICH_URL: http://immich-server:2283
+    ports:
+      - "3000:3000"
+    deploy:
+      labels:
+        - "traefik.enable=false"
+    networks:
+      - main
+
+  # --- Postgres Backup Cron ---
+  pgdump:
+    image: postgres:18-alpine
+    entrypoint: >
+      sh -c "PGPASSWORD=immich pg_dump -h immich-postgres -U immich immich > /mnt/photos/postgres-dumps/immich.sql"
+    volumes:
+      - photos:/mnt/photos
+    deploy:
+      replicas: 0
+      restart_policy:
+        condition: none
+      labels:
+        - "traefik.enable=false"
+        - "swarm.cronjob.enable=true"
+        - "swarm.cronjob.schedule=0 4 * * *"
+        - "swarm.cronjob.skip-running=true"
+        - "swarm.cronjob.replicas=1"
+    networks:
+      - main
+
+volumes:
+  photos:
+    driver_opts:
+      type: "nfs"
+      o: "addr=10.10.10.60,nfsvers=4"
+      device: ":/mnt/HDD/local/backup/photos"
+  uploads:
+    driver_opts:
+      type: "nfs"
+      o: "addr=10.10.10.60,nfsvers=4"
+      device: ":/mnt/HDD/local/backup/photos/uploads"
+  pgdata:
+    driver: local
+    driver_opts:
+      type: "none"
+      o: "bind"
+      device: "/mnt/cephfs/immich-postgres"
+  ml-cache:
+    driver: local
+    driver_opts:
+      type: "none"
+      o: "bind"
+      device: "/mnt/cephfs/immich-ml-cache"
+
+networks:
+  main:
+    external: true
