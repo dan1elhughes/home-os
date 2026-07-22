@@ -76,15 +76,15 @@ services:
       - PGID=${PGID?error}
       - TZ=${TZ?error}
       - DOCKER_MODS=linuxserver/mods:homeassistant-hacs
-      # Immich API key for job-queue monitoring (read-only, queue scope only).
-      - IMMICH_API_KEY_QUEUE_MONITORING=${IMMICH_API_KEY_QUEUE_MONITORING?error}
+      # Immich API key for job-queue management (read + pause/resume).
+      - IMMICH_API_KEY_QUEUE_MANAGEMENT=${IMMICH_API_KEY_QUEUE_MANAGEMENT?error}
     # Shim: write secrets.yaml from 1Password env vars, then hand off to s6 init.
     entrypoint:
       - /bin/sh
       - -c
       - |
         set -e
-        printf 'immich_api_key_queue_monitoring: %s\n' "$$IMMICH_API_KEY_QUEUE_MONITORING" > /config/secrets.yaml
+        printf 'immich_api_key_queue_management: %s\n' "$$IMMICH_API_KEY_QUEUE_MANAGEMENT" > /config/secrets.yaml
         chmod 600 /config/secrets.yaml
         exec /init
     volumes:
