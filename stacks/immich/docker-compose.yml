@@ -12,6 +12,7 @@ services:
       REDIS_HOSTNAME: immich-redis
       REDIS_PASSWORD: immich
       UPLOAD_LOCATION: /data
+      IMMICH_WORKERS_INCLUDE: 'api'
     volumes:
       - photos:/mnt/photos
       - uploads_upload:/data/upload
@@ -35,13 +36,40 @@ services:
     networks:
       - main
 
-  # --- Machine Learning (OpenVINO, GPU ×3) ---
+  # --- Microservices Worker (global — one per node) ---
+  immich-microservices:
+    image: ghcr.io/immich-app/immich-server:v3.0.3
+    user: "3000:3000"
+    environment:
+      DB_HOSTNAME: immich-postgres
+      DB_USERNAME: immich
+      DB_PASSWORD: immich
+      DB_DATABASE_NAME: immich
+      DB_PORT: "5432"
+      REDIS_HOSTNAME: immich-redis
+      REDIS_PASSWORD: immich
+      UPLOAD_LOCATION: /data
+      IMMICH_WORKERS_EXCLUDE: 'api'
+    volumes:
+      - photos:/mnt/photos
+      - uploads_upload:/data/upload
+      - uploads_encoded_video:/data/encoded-video
+      - uploads_library:/data/library
+      - uploads_profile:/data/profile
+      - uploads_backups:/data/backups
+      - thumbs:/data/thumbs
+    deploy:
+      mode: global
+      labels:
+        - "traefik.enable=false"
+    networks:
+      - main
+
+  # --- Machine Learning ---
   immich-machine-learning:
-    image: ghcr.io/immich-app/immich-machine-learning:v3.0.3-openvino
+    image: ghcr.io/immich-app/immich-machine-learning:v3.0.3
     volumes:
       - ml-cache:/cache
-    devices:
-      - /dev/dri:/dev/dri
     deploy:
       mode: global
       labels:
