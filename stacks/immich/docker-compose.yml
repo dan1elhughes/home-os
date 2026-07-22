@@ -15,6 +15,7 @@ services:
     volumes:
       - photos:/mnt/photos
       - uploads:/data
+      - thumbs:/data/thumbs
     deploy:
       labels:
         - "traefik.enable=true"
@@ -118,6 +119,11 @@ volumes:
       type: "nfs"
       o: "addr=10.10.10.60,nfsvers=4"
       device: ":/mnt/HDD/local/backup/photos/uploads"
+  thumbs:
+    driver_opts:
+      type: "nfs"
+      o: "addr=10.10.10.60,nfsvers=4"
+      device: ":/mnt/SSD/local/thumbs"
   pgdata:
     driver: local
     driver_opts:
