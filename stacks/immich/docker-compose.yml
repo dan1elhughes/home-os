@@ -14,7 +14,11 @@ services:
       UPLOAD_LOCATION: /data
     volumes:
       - photos:/mnt/photos
-      - uploads:/data
+      - uploads_upload:/data/upload
+      - uploads_encoded_video:/data/encoded-video
+      - uploads_library:/data/library
+      - uploads_profile:/data/profile
+      - uploads_backups:/data/backups
       - thumbs:/data/thumbs
     deploy:
       labels:
@@ -114,11 +118,31 @@ volumes:
       type: "nfs"
       o: "addr=10.10.10.60,nfsvers=4"
       device: ":/mnt/HDD/local/backup/photos"
-  uploads:
+  uploads_upload:
     driver_opts:
       type: "nfs"
       o: "addr=10.10.10.60,nfsvers=4"
-      device: ":/mnt/HDD/local/backup/photos/uploads"
+      device: ":/mnt/HDD/local/backup/photos/uploads/upload"
+  uploads_encoded_video:
+    driver_opts:
+      type: "nfs"
+      o: "addr=10.10.10.60,nfsvers=4"
+      device: ":/mnt/HDD/local/backup/photos/uploads/encoded-video"
+  uploads_library:
+    driver_opts:
+      type: "nfs"
+      o: "addr=10.10.10.60,nfsvers=4"
+      device: ":/mnt/HDD/local/backup/photos/uploads/library"
+  uploads_profile:
+    driver_opts:
+      type: "nfs"
+      o: "addr=10.10.10.60,nfsvers=4"
+      device: ":/mnt/HDD/local/backup/photos/uploads/profile"
+  uploads_backups:
+    driver_opts:
+      type: "nfs"
+      o: "addr=10.10.10.60,nfsvers=4"
+      device: ":/mnt/HDD/local/backup/photos/uploads/backups"
   thumbs:
     driver_opts:
       type: "nfs"
