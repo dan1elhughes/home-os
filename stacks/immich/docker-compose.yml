@@ -14,7 +14,7 @@ services:
       UPLOAD_LOCATION: /data
       IMMICH_WORKERS_INCLUDE: 'api'
     volumes:
-      - photos:/mnt/photos
+      - photos:/mnt/photos:ro
       - uploads_upload:/data/upload
       - uploads_encoded_video:/data/encoded-video
       - uploads_library:/data/library
@@ -51,7 +51,7 @@ services:
       UPLOAD_LOCATION: /data
       IMMICH_WORKERS_EXCLUDE: 'api'
     volumes:
-      - photos:/mnt/photos
+      - photos:/mnt/photos:ro
       - uploads_upload:/data/upload
       - uploads_encoded_video:/data/encoded-video
       - uploads_library:/data/library
