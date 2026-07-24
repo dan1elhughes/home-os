@@ -120,26 +120,6 @@ services:
     networks:
       - main
 
-  # --- Postgres Backup Cron ---
-  pgdump:
-    image: postgres:18-alpine
-    entrypoint: >
-      sh -c "PGPASSWORD=immich pg_dump -h immich-postgres -U immich immich > /mnt/photos/postgres-dumps/immich.sql"
-    volumes:
-      - photos:/mnt/photos
-    deploy:
-      replicas: 0
-      restart_policy:
-        condition: none
-      labels:
-        - "traefik.enable=false"
-        - "swarm.cronjob.enable=true"
-        - "swarm.cronjob.schedule=0 4 * * *"
-        - "swarm.cronjob.skip-running=true"
-        - "swarm.cronjob.replicas=1"
-    networks:
-      - main
-
 volumes:
   photos:
     driver_opts:
