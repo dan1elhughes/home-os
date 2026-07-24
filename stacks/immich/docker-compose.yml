@@ -126,27 +126,27 @@ volumes:
     driver_opts:
       type: "nfs"
       o: "addr=10.10.10.60,nfsvers=4"
-      device: ":/mnt/HDD/local/backup/photos/uploads/upload"
+      device: ":/mnt/HDD/local/backup/photos/immich/upload"
   uploads_encoded_video:
     driver_opts:
       type: "nfs"
       o: "addr=10.10.10.60,nfsvers=4"
-      device: ":/mnt/HDD/local/backup/photos/uploads/encoded-video"
+      device: ":/mnt/HDD/local/backup/photos/immich/encoded-video"
   uploads_library:
     driver_opts:
       type: "nfs"
       o: "addr=10.10.10.60,nfsvers=4"
-      device: ":/mnt/HDD/local/backup/photos/uploads/library"
+      device: ":/mnt/HDD/local/backup/photos/immich/library"
   uploads_profile:
     driver_opts:
       type: "nfs"
       o: "addr=10.10.10.60,nfsvers=4"
-      device: ":/mnt/HDD/local/backup/photos/uploads/profile"
+      device: ":/mnt/HDD/local/backup/photos/immich/profile"
   uploads_backups:
     driver_opts:
       type: "nfs"
       o: "addr=10.10.10.60,nfsvers=4"
-      device: ":/mnt/HDD/local/backup/photos/uploads/backups"
+      device: ":/mnt/HDD/local/backup/photos/immich/backups"
   thumbs:
     driver_opts:
       type: "nfs"
