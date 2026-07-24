@@ -114,7 +114,7 @@ services:
         - "kuma.lidarr.http.url=https://lidarr.danhughes.dev/ping"
 
   swiparr:
-    image: ghcr.io/m3sserstudi0s/swiparr:1.5.0
+    image: ghcr.io/m3sserstudi0s/swiparr:1.5.1
     environment:
       - PUID=${PUID?error}
       - PGID=${PGID?error}
