@@ -13,6 +13,8 @@ services:
       REDIS_PASSWORD: immich
       UPLOAD_LOCATION: /data
       IMMICH_WORKERS_INCLUDE: 'api'
+    ports:
+      - "2283:2283"
     volumes:
       - photos:/mnt/photos:ro
       - uploads_upload:/data/upload
