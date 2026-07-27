@@ -78,7 +78,21 @@ services:
       - DOCKER_MODS=linuxserver/mods:homeassistant-hacs
       # Immich API key for job-queue management (read + pause/resume).
       - IMMICH_API_KEY_QUEUE_MANAGEMENT=${IMMICH_API_KEY_QUEUE_MANAGEMENT?error}
-    # Shim: write secrets.yaml from 1Password env vars, then hand off to s6 init.
+    # Shim: write secrets.yaml from 1Password env vars, suppress the slow
+    # python package chown the ls.io init does on every new container, then
+    # hand off to s6 init.
+    #
+    # The upstream init renames python*.bak -> python* and chown -R abc:abc
+    # on ~138k files.  Both operations trigger overlayfs copy-up of all 138k
+    # files from the image layer -- the real slowdown.  We symlink instead,
+    # creating only a single new inode in the writable layer.  Copy-up then
+    # happens lazily only for files HACS/pip actually modify, not at startup.
+    #
+    # This is safe because the packages are root:lsio (7310) g+w from the
+    # Dockerfile and abc is added to the lsio group by the init.  When the
+    # upstream script runs it will see the symlink, fail its mv (harmless --
+    # no set -e), and touch only the symlink inode with chown -R (GNU chown
+    # does not follow symlinks by default).
     entrypoint:
       - /bin/sh
       - -c
@@ -86,6 +100,13 @@ services:
         set -e
         printf 'immich_api_key_queue_management: %s\n' "$$IMMICH_API_KEY_QUEUE_MANAGEMENT" > /config/secrets.yaml
         chmod 600 /config/secrets.yaml
+        # Symlink python*.bak -> python* so Python can find its packages
+        # without triggering overlayfs copy-up of 138k files at startup.
+        for bak in /usr/local/lib/python*.bak; do
+          [ -d "$$bak" ] || continue
+          target="$${bak%.bak}"
+          [ -e "$$target" ] || ln -s "$$bak" "$$target"
+        done
         exec /init
     volumes:
       - /mnt/cephfs/homeassistant:/config
