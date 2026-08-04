@@ -224,8 +224,8 @@ pred_bat:
   metric_octopus_import: "sensor.octopus_energy_electricity_15p0706167_2000050773706_current_rate"
   metric_octopus_export: "sensor.octopus_energy_electricity_15p0706167_2000060833200_export_current_rate"
   metric_standing_charge: "sensor.octopus_energy_electricity_15p0706167_2000050773706_current_standing_charge"
-  octopus_saving_session: "re:(event.octopus_energy_([0-9a-z_]+|)_octoplus_saving_session_events)"
-  octopus_free_session: "re:(event.octopus_energy_([0-9a-z_]+|)_octoplus_free_electricity_session_events)"
+  octopus_saving_session: "re:(event.octopus_energy_([0-9a-z_]+|)_octoplus_power_down_events)"
+  octopus_free_session: "re:(event.octopus_energy_([0-9a-z_]+|)_octoplus_power_up_events)"
 
   # Per-car Octopus Intelligent dispatching sensors, matching num_cars: 2
   # (see the multi-car IOG section of the Predbat car-charging docs). We
