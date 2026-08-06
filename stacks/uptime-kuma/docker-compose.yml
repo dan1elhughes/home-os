@@ -1,7 +1,7 @@
 ---
 services:
   uptime-kuma:
-    image: louislam/uptime-kuma:2.4.0
+    image: louislam/uptime-kuma:2.5.0
     environment:
       - TZ=${TZ?error}
       # External MariaDB backend. With these set on first boot (data dir has
