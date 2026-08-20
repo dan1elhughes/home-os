@@ -50,7 +50,7 @@ services:
       start_period: 30s
 
   trmnl-ha:
-    image: ghcr.io/usetrmnl/trmnl-ha-amd64:0.9.5
+    image: ghcr.io/usetrmnl/trmnl-ha-amd64:0.10.0
     volumes:
       - /mnt/cephfs/trmnl:/data
     environment:
