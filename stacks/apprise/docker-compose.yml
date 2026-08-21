@@ -1,6 +1,6 @@
 services:
   apprise:
-    image: ghcr.io/linuxserver/apprise-api:1.5.1
+    image: ghcr.io/linuxserver/apprise-api:1.5.2
     environment:
       - PUID=${PUID?error}
       - PGID=${PGID?error}
