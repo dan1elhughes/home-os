@@ -97,7 +97,7 @@ services:
 
   # --- Redis ---
   immich-redis:
-    image: valkey/valkey:9.1.1
+    image: valkey/valkey:9.1.2
     command: valkey-server --requirepass immich
     deploy:
       labels:
