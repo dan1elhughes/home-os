@@ -70,8 +70,13 @@ upgrades, `loginctl enable-linger`, and the Raspberry Pi `init.sh`.
   regress on the Flatcar kernel.
 - **The join token is baked in**, so it goes stale if the swarm is
   re-initialised. Re-render and reinstall the follower nodes if that happens.
-- **`core` is the login user** and Flatcar's own update reboots may interact
-  with the weekly reboot timer; Locksmith may be needed later.
+- **Reboots are staggered across the three managers.** `/etc/flatcar/update.conf`
+  sets `REBOOT_STRATEGY=reboot` with a one-hour window, and the weekly reboot
+  timer uses the same slot: cl01 Sunday 02:00, cl02 03:00, cl03 04:00. A Flatcar
+  update therefore never reboots a node outside its slot, and the managers
+  reboot one at a time so the swarm keeps quorum. Change the slots in
+  `nodes/*.env` (`REBOOT_WINDOW_START`, `REBOOT_ONCALENDAR`).
+- **`core` is the login user**.
 
 ## Local pre-flight (optional)
 

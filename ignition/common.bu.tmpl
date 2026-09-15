@@ -35,6 +35,19 @@ storage:
           PasswordAuthentication no
           PermitRootLogin no
 
+    # Flatcar update/reboot strategy. reboot means locksmithd reboots as soon
+    # as an update is ready, but only inside the window below. The window is
+    # staggered per node (see nodes/*.env) so the three managers never reboot in
+    # the same hour and the swarm keeps quorum. Matches the weekly reboot timer.
+    - path: /etc/flatcar/update.conf
+      overwrite: true
+      mode: 0420
+      contents:
+        inline: |
+          REBOOT_STRATEGY=reboot
+          LOCKSMITHD_REBOOT_WINDOW_START="${REBOOT_WINDOW_START}"
+          LOCKSMITHD_REBOOT_WINDOW_LENGTH=1h
+
     - path: /etc/keepalived/keepalived.conf
       mode: 0644
       contents:
@@ -111,11 +124,10 @@ systemd:
       enabled: true
       contents: |
         [Unit]
-        Description=Weekly reboot (Sunday 02:00-03:00)
+        Description=Weekly reboot
 
         [Timer]
-        OnCalendar=Sun *-*-* 02:00:00
-        RandomizedDelaySec=1h
+        OnCalendar=${REBOOT_ONCALENDAR}
         Persistent=true
 
         [Install]

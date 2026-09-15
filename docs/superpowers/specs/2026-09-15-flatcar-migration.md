@@ -299,7 +299,11 @@ a workstation over NFS.
 - **Two swarms, two contexts** — always set `DOCKER_CONTEXT` explicitly.
 - **Ignition runs at first boot only** — anything added later (keepalived on
   cl01) has to be include-but-disabled, or applied out of band.
-- **Weekly reboot timer vs Flatcar's update reboots** — may need Locksmith.
+- **Weekly reboot timer vs Flatcar's update reboots** — resolved by staggering.
+  `/etc/flatcar/update.conf` sets `REBOOT_STRATEGY=reboot` with a one-hour
+  maintenance window per node (cl01 02:00, cl02 03:00, cl03 04:00), matching the
+  weekly reboot timer, so the managers never reboot together. `etcd-lock` was
+  rejected: it needs an etcd cluster and this stack runs Docker Swarm.
 - **NFS version on Flatcar** — 4.1/4.2 kernel regression; pin 4.0.
 - **DB network exposure** — firewalled to the swarm subnet.
 
