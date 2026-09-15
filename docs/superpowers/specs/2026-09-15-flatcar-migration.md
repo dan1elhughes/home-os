@@ -34,7 +34,8 @@ Decisions already made:
    host**, so configs can be edited from a workstation.
 6. **Media/Immich blob exports stay as they are** (Docker `type: nfs` volumes).
 7. **Ansible is retired entirely** — playbook, inventory, roles, `init.sh`
-   deleted; Ignition owns provisioning. Config delivery to nodes is out of scope.
+   deleted; Ignition owns provisioning. Config delivery is netboot.xyz PXE via
+   `ignition.config.url` (see Delivery in section 4).
 8. **Node login user is Flatcar's `core`** — SSH key, passwordless sudo, docker
    group. No bespoke user.
 9. **Swarm membership is set in Ignition**, manager join token baked into the
@@ -185,6 +186,30 @@ export NEW_CONTEXT=cl01
 ```
 
 The phases follow the **0 → 1 → 3** shape: one node, then the other two together.
+
+### Delivery (netboot.xyz)
+
+Boot each node from the netboot.xyz Flatcar menu entry. It prompts for the
+Ignition URL and then boots the PXE kernel with
+`ignition.config.url=<url> flatcar.first_boot=1` (plus
+`flatcar.autologin=tty1/ttyS0`). The rendered `.ign` for the node must be
+reachable over HTTP on the internal network — it carries the VRRP password and
+the manager join token, so do not serve it publicly. `flatcar.first_boot=1` is
+what makes Ignition run; the menu's `ignition_config` entry sets it.
+
+**A PXE boot is RAM-only; it does not install to disk.** The PXE image has
+`flatcar-install`, so after it boots, install and reboot:
+
+```sh
+flatcar-install -d <disk> -i /path/to/<node>.ign
+```
+
+By default it installs the same channel and version that was PXE-booted. Do this
+either by hand over SSH, or from a small **bootstrap** Ignition config whose
+systemd unit fetches the node `.ign` and runs `flatcar-install`, then reboots —
+so the node's real Ignition applies on the first disk boot rather than in RAM.
+Without this step the node runs diskless: docker and the swarm would start in
+RAM and reset on every reboot.
 
 ### Phase 0 — TrueNAS prep
 
@@ -367,4 +392,3 @@ a workstation over NFS.
   cleanly at Phase 3.
 - The MicroCeph pool's `min_size`, to be sure `/mnt/cephfs` stays writable after
   cl01 is reformatted and one OSD is gone.
-- The Ignition **delivery** mechanism (out of scope; assumed to exist).
