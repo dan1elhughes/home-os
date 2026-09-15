@@ -80,8 +80,7 @@ values, transpiled with `butane --pretty --strict`):
 
 - Common: `core` user with embedded SSH keys, passwordless sudo, docker group;
   hostname (`/etc/hostname`); SSH hardening; `mnt-nas.mount`; Docker drop-in
-  `10-nas.conf`; docker-prune
-  service+timer; reboot timer; `rpc-statd`.
+  `10-nas.conf`; docker-prune service+timer; `rpc-statd`.
 - cl01: `swarm-init.service`; keepalived included but **disabled** until Phase 3.
 - cl02/cl03 (Phase 4): `swarm-join.service` with the baked manager token;
   keepalived `BACKUP`.
@@ -125,7 +124,7 @@ restoring the image. Log in on port 2222 (or the serial console) and check:
 - `findmnt /mnt/nas` and `systemctl status mnt-nas.mount`
 - `systemctl show docker -p Requires` includes `mnt-nas.mount`
 - `docker node ls` shows one manager
-- `systemctl status docker-prune.timer reboot.timer`
+- `systemctl status docker-prune.timer locksmithd.service`
 - `ls /mnt/nas`
 
 **NFS export (Docker):** run an NFS server container with a test export, and
@@ -158,8 +157,8 @@ on real hardware or multiple QEMU VMs.
   missing.
 - A second run with the Docker drop-in stripped from the rendered config (test
   only) confirmed the rest: `docker.service` active, `swarm.service` active with
-  one manager (`docker node ls`), the staggered `reboot.timer`, and a working
-  container. That run also exposed that Flatcar defaults the hostname to
+  one manager (`docker node ls`), the staggered locksmithd reboot window, and a
+  working container. That run also exposed that Flatcar defaults the hostname to
   `localhost`, so Ignition now writes `/etc/hostname` from `NODE_NAME`.
 
 ## 4. The sequence
@@ -320,11 +319,13 @@ a workstation over NFS.
 - **Two swarms, two contexts** — always set `DOCKER_CONTEXT` explicitly.
 - **Ignition runs at first boot only** — anything added later (keepalived on
   cl01) has to be include-but-disabled, or applied out of band.
-- **Weekly reboot timer vs Flatcar's update reboots** — resolved by staggering.
-  `/etc/flatcar/update.conf` sets `REBOOT_STRATEGY=reboot` with a one-hour
-  maintenance window per node (cl01 02:00, cl02 03:00, cl03 04:00), matching the
-  weekly reboot timer, so the managers never reboot together. `etcd-lock` was
-  rejected: it needs an etcd cluster and this stack runs Docker Swarm.
+- **Weekly reboot vs Flatcar's update reboots** — resolved by using one
+  mechanism. `/etc/flatcar/update.conf` sets `REBOOT_STRATEGY=reboot` with a
+  one-hour maintenance window per node (cl01 02:00, cl02 03:00, cl03 04:00), so
+  the managers never reboot together and a node reboots only when an update is
+  staged. The old weekly reboot timer is dropped so it cannot race locksmithd.
+  `etcd-lock` was rejected: it needs an etcd cluster and this stack runs Docker
+  Swarm.
 - **NFS version on Flatcar** — 4.1/4.2 kernel regression; pin 4.0.
 - **DB network exposure** — firewalled to the swarm subnet.
 

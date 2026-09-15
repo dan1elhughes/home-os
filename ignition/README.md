@@ -49,7 +49,7 @@ mechanism itself is out of scope.
 
 | Old Ansible role | Now in Ignition |
 |---|---|
-| `common` | `core` SSH keys, passwordless sudo, SSH hardening, weekly reboot timer |
+| `common` | `core` SSH keys, passwordless sudo, SSH hardening, hostname, update/reboot policy |
 | `docker` | `docker-prune` service+timer (Docker itself ships with Flatcar) |
 | `swarm` | `swarm.service` (init or join), Docker `Requires=mnt-nas.mount` drop-in |
 | `keepalived` | `/etc/keepalived/keepalived.conf` + a disabled `keepalived.service` |
@@ -70,12 +70,13 @@ upgrades, `loginctl enable-linger`, and the Raspberry Pi `init.sh`.
   regress on the Flatcar kernel.
 - **The join token is baked in**, so it goes stale if the swarm is
   re-initialised. Re-render and reinstall the follower nodes if that happens.
-- **Reboots are staggered across the three managers.** `/etc/flatcar/update.conf`
-  sets `REBOOT_STRATEGY=reboot` with a one-hour window, and the weekly reboot
-  timer uses the same slot: cl01 Sunday 02:00, cl02 03:00, cl03 04:00. A Flatcar
-  update therefore never reboots a node outside its slot, and the managers
-  reboot one at a time so the swarm keeps quorum. Change the slots in
-  `nodes/*.env` (`REBOOT_WINDOW_START`, `REBOOT_ONCALENDAR`).
+- **Reboots come only from locksmithd, staggered across the managers.**
+  `/etc/flatcar/update.conf` sets `REBOOT_STRATEGY=reboot` with a one-hour
+  window: cl01 Sunday 02:00, cl02 03:00, cl03 04:00. A node reboots only when
+  an update is staged, and only in its slot, so the managers never reboot
+  together and the swarm keeps quorum. There is no unconditional weekly reboot
+  (the old Ansible cron is gone). Set the slot per node with
+  `REBOOT_WINDOW_START` in `nodes/*.env`.
 - **`core` is the login user**.
 - **Hostname comes from `/etc/hostname`.** Flatcar defaults to `localhost`, so
   Ignition writes `${NODE_NAME}` per node. Without it every swarm node would be
