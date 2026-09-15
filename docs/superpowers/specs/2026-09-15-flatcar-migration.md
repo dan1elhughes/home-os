@@ -365,4 +365,6 @@ a workstation over NFS.
 - The manager join token for the baked follower configs.
 - How keepalived is currently running on the old cluster, so it can be stopped
   cleanly at Phase 3.
+- The MicroCeph pool's `min_size`, to be sure `/mnt/cephfs` stays writable after
+  cl01 is reformatted and one OSD is gone.
 - The Ignition **delivery** mechanism (out of scope; assumed to exist).
