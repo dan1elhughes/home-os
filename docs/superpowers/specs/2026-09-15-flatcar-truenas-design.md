@@ -52,6 +52,9 @@ Ignition instead of Ansible.
 10. **Database credentials are unchanged** — no churn during migration.
 11. **Snapshots and backups are out of scope.**
 12. **The `home-assistant` repo's recorder change is in scope with this work.**
+13. **The migration is progressive.** Build a single-node swarm on cl01 first,
+    move services one at a time, cut ingress over last, then expand to three
+    nodes. The old swarm keeps serving until each service is moved.
 
 ## Design
 
@@ -142,10 +145,12 @@ a small build script renders a common fragment plus per-node values into three
 
 **Per node:**
 
-- **cl01:** `swarm-init.service` (oneshot) runs
+- **cl01** (Phase 1): `swarm-init.service` (oneshot) runs
   `docker swarm init --advertise-addr 10.10.10.21`, guarded by
-  `ConditionPathExists` on the swarm state file.
-- **cl02/cl03:** `swarm-join.service` (oneshot) runs
+  `ConditionPathExists` on the swarm state file. keepalived is included but
+  **disabled** until Phase 3.
+- **cl02/cl03** (Phase 4, rendered after cl01's swarm exists):
+  `swarm-join.service` (oneshot) runs
   `docker swarm join --token <manager-token> 10.10.10.21:2377`. The token is
   baked in; if the swarm is re-initialised the config must be re-baked. The join
   target is cl01's node IP (not the VIP), so it does not depend on keepalived.
@@ -193,29 +198,68 @@ NFS blob volumes are untouched.
 **media / traefik / apprise / sponsorblock**
 - Path renames only.
 
-### 5. Data migration and cutover
+### 5. Progressive migration
 
-1. **TrueNAS prep.** Create `/mnt/SSD/cluster` and the four `/mnt/SSD/db/*`
-   datasets, set the config dataset to `PUID:PGID`, create the open (`0.0.0.0/0`)
-   `mapall` export, and deploy the DB app (firewalled to the swarm subnet).
-2. **Config copy (bridge).** While one node is still on the old OS, mount the new
-   export at `/mnt/nas` and `rsync -aHAX --numeric-ids` each surviving
-   `/mnt/cephfs/<dir>` across. Verify counts. CephFS is shared, so one node is
-   enough.
-3. **Database migration.** Dump from the running containers (`pg_dump`/
-   `pg_dumpall` for the three Postgres DBs, `mariadb-dump` for Kuma) and restore
-   into the TrueNAS DBs. Immich must be migrated exactly; the HA recorder DB
-   carries history and long-term statistics.
-4. **Cutover.** Scale the affected stacks to 0, do a final `rsync` and a final DB
-   dump/restore, provision the nodes as Flatcar (Ignition configs), and redeploy
-   the stacks (and the rebuilt home-assistant config) against `/mnt/nas` and the
-   remote DBs.
-5. **Verify.** Check each service's data (Immich library, HA history, Gitea
-   repos, Kuma monitors, *arr configs) and cluster health (swarm quorum, VIP,
-   NFS mount present before Docker). Keep the Ceph data until this passes.
+The old swarm (three managers) keeps serving while a **new single-manager swarm**
+is built on cl01 and services are moved across one at a time. The `10.10.10.20`
+VIP is live and floating, and DNS points at it, which is what makes the ingress
+cutover in Phase 3 a VIP move rather than a DNS change.
 
-**Rollback:** the old setup is untouched until step 4. After cutover, rollback
-means reverting the compose changes and booting the previous OS image.
+**Phase 0 — TrueNAS prep.** Create `/mnt/SSD/cluster` and the four
+`/mnt/SSD/db/*` datasets, set the config dataset to `PUID:PGID`, create the open
+(`0.0.0.0/0`) `mapall` export, and deploy the DB app (firewalled to the swarm
+subnet).
+
+**Phase 1 — Stand up the new swarm on cl01.**
+- Remove cl01 from the old swarm, leaving cl02/cl03 as its two managers. Verify
+  the old swarm is healthy before touching cl01.
+- Install Flatcar on cl01 with its Ignition config: `core` user/SSH,
+  `mnt-nas.mount`, the Docker drop-in, `docker swarm init --advertise-addr
+  10.10.10.21`, docker-prune and reboot timers, `rpc-statd`. **No join.**
+  keepalived files are present but the service stays **disabled** to avoid
+  fighting the old cluster for the VIP.
+- Create the external overlay network the stacks expect:
+  `docker network create --driver overlay --attachable main`.
+- Verify: `/mnt/nas` is mounted before Docker starts, and `docker node ls` shows
+  a single manager.
+
+**Phase 2 — Move services one at a time.**
+- Order, least-coupled first: gitea, uptime-kuma, apprise, sponsorblock, media
+  (*arr + transmission), then homeassistant (+ mosquitto, trmnl, tasmoadmin,
+  predbat), then immich.
+- Per service:
+  1. Scale it to 0 on the old swarm (freeze).
+  2. `rsync -aHAX --numeric-ids /mnt/cephfs/<dir>` → `/mnt/SSD/cluster/<dir>`.
+  3. If it has a DB, dump from the old container and restore into the TrueNAS DB.
+  4. Deploy to the new swarm with `/mnt/nas` paths and the remote DB host, with a
+     temporary `ports:` publish for verification.
+  5. Verify, remove the temporary publish, and leave the old copy frozen.
+- Only **one instance of an app may run at a time**, because its config now lives
+  on the shared NFS export.
+- `deploy.sh` must target the new swarm context. The old swarm keeps its
+  last-applied specs untouched; it is never redeployed.
+
+**Phase 3 — Migrate Traefik and move the VIP.**
+- Deploy Traefik on cl01 against the migrated `/mnt/nas/traefik-config*`
+  (copy `acme.json` so the certs carry over). Verify with a `Host` header against
+  cl01's IP before moving anything.
+- Stop keepalived on the old cluster, then enable it on cl01. The VIP moves to
+  cl01; DNS already points at it. The old swarm is now idle.
+
+**Phase 4 — Expand the swarm.**
+- Render cl02/cl03 Ignition configs (manager join token from cl01's swarm,
+  keepalived `BACKUP`).
+- Reinstall cl02/cl03 as Flatcar; they leave the old swarm (which then dies) and
+  join the new one, forming a three-manager swarm with keepalived running on all
+  three.
+- Rebalance service placement.
+
+**Phase 5 — Retire the old.** Decommission MicroCeph; keep the Ceph data until
+everything is verified.
+
+**Rollback:** until each service is moved it still runs untouched on the old
+swarm. After a service is moved, rollback means redeploying its previous spec
+(and DB dump) to the old swarm. Ceph holds the original copies until the end.
 
 ### 6. Risks and accepted trade-offs
 
@@ -230,6 +274,15 @@ means reverting the compose changes and booting the previous OS image.
 - **Baked join token** goes stale if the swarm is re-initialised.
 - **keepalived** depends on a community sysext and on the VRRP `auth_pass` being
   injected at render time.
+- **Old-swarm quorum during migration** — after cl01 leaves, the old swarm runs
+  on two managers, so a single failure freezes its services. Move steadily and
+  keep both up.
+- **VIP conflict** — keepalived must stay stopped on cl01 until the old
+  cluster's is stopped (Phase 3), or both clusters claim `10.10.10.20`.
+- **Two swarms, two contexts** — deploying to the wrong cluster is easy; always
+  be explicit about `DOCKER_CONTEXT`.
+- **Ignition runs at first boot only** — anything added later (keepalived on
+  cl01) has to be written include-but-disabled, or applied out of band.
 - **Weekly reboot timer vs Flatcar's own update reboots** — may need
   coordination (Locksmith).
 - **NFS version on Flatcar** — 4.1/4.2 kernel regression; pin 4.0 and validate.
@@ -249,3 +302,5 @@ means reverting the compose changes and booting the previous OS image.
 - The LAN interface name for `mnt-nas.mount`/keepalived (was
   `ansible_default_ipv4.interface`).
 - The manager join token for the baked follower configs.
+- How keepalived is currently running on the old cluster (its Ansible role is
+  commented out, yet the VIP is live), so it can be stopped cleanly at Phase 3.
