@@ -202,26 +202,43 @@ use that hostname for PXE: a node being reinstalled must not depend on the swarm
 that is being migrated, and firmware has no internal DNS. Read the boot chain
 from `10.10.10.60:31010` directly.
 
+**Node prerequisites.** The node must boot UEFI, because UniFi hands out
+`netboot.xyz.efi`. Secure Boot must be **off** (that binary is unsigned), and
+the NIC needs a driver bundled in iPXE. A legacy-BIOS node would need
+`netboot.xyz-undionly.kpxe` as the UniFi bootfile instead.
+
 Serve the rendered configs from the workstation with `ignition/serve.sh`, run in
 its own terminal (it is a foreground server and blocks until Ctrl-C). It serves
 `ignition/out/` and prints the URL to paste at the prompt (for example
-`http://10.10.10.142:8000/cl01.ign`). It listens on all interfaces, which is fine
-on the trusted LAN, but the files carry the VRRP password and the manager join
-token, so do not leave it running on an untrusted network.
+`http://10.10.10.142:8000/cl01.ign`). Keep it running for the whole install; the
+booting node fetches its config from it. It listens on all interfaces, which is
+fine on the trusted LAN, but the files carry the VRRP password and the manager
+join token, so do not leave it running on an untrusted network.
 
-**A PXE boot is RAM-only; it does not install to disk.** The PXE image has
-`flatcar-install`, so after it boots, install and reboot:
+**Per node:**
 
-```sh
-flatcar-install -d <disk> -i /path/to/<node>.ign
-```
+1. At the Flatcar menu choose **`ignition_config`** and paste
+   `http://10.10.10.142:8000/<node>.ign`. That entry is what sets
+   `flatcar.first_boot=1`; choosing a channel directly does not, and Ignition
+   will not run.
+2. Choose **stable** (or beta/alpha). Do **not** choose **edge** — Flatcar has no
+   edge channel, so it fails. Either use stable, or add an `lts` entry to
+   `flatcar.ipxe` on the NAS.
+3. The node boots in RAM and auto-logs-in as `core`. **A PXE boot does not
+   install to disk**, so install and reboot:
 
-By default it installs the same channel and version that was PXE-booted. Do this
-either by hand over SSH, or from a small **bootstrap** Ignition config whose
-systemd unit fetches the node `.ign` and runs `flatcar-install`, then reboots —
-so the node's real Ignition applies on the first disk boot rather than in RAM.
-Without this step the node runs diskless: docker and the swarm would start in
-RAM and reset on every reboot.
+   ```sh
+   curl -o /tmp/<node>.ign http://10.10.10.142:8000/<node>.ign
+   sudo flatcar-install -d /dev/<disk> -i /tmp/<node>.ign
+   sudo reboot
+   ```
+
+   `flatcar-install` is in the PXE image and installs the same channel and
+   version that was PXE-booted by default.
+
+4. The node's real Ignition applies on the first **disk** boot. Skipping step 3
+   leaves the node diskless: docker and the swarm start in RAM and reset on every
+   reboot.
 
 ### Phase 0 — TrueNAS prep
 
