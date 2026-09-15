@@ -80,14 +80,40 @@ upgrades, `loginctl enable-linger`, and the Raspberry Pi `init.sh`.
 
 ## Local pre-flight (optional)
 
-Boot a real node without touching hardware, using the Flatcar QEMU image and
-`--files-dir` for the rendered config:
+Boot a real node without touching hardware. `-i` takes the rendered Ignition
+file; `-snapshot` makes every boot a first boot and never modifies the image.
 
 ```sh
-./flatcar_production_qemu_uefi.sh -i out/cl01.ign -f 2049:2049 -- -nographic -snapshot
+./flatcar_production_qemu_uefi.sh -i out/cl01.ign -p 2222 -- -snapshot
 ```
 
-`-snapshot` makes every boot a first boot. The mount will not come up unless a
-reachable NFS server answers; to test locally, point `NAS_SERVER` at a throwaway
-NFS container and use `10.0.2.2` (QEMU's host address). Swarm join, keepalived
-and the VIP are best tested on real hardware or multiple VMs.
+**HVF hangs on some Apple Silicon hosts.** The wrapper defaults to
+`-machine virt,accel=kvm:hvf:tcg -cpu host`, which hangs at the UEFI banner on
+macOS 26 with QEMU 11.1.1 (100% CPU, no kernel output). TCG boots reliably but
+is slow:
+
+```sh
+qemu-system-aarch64 -M virt,accel=tcg,gic-version=3 -cpu cortex-a57 \
+  -m 3072 -display none -serial file:console.log \
+  -drive if=pflash,unit=0,file=flatcar_production_qemu_uefi_efi_code.qcow2,format=qcow2,readonly=on \
+  -drive if=pflash,unit=1,file=flatcar_production_qemu_uefi_efi_vars.qcow2,format=qcow2 \
+  -drive if=none,id=blk,file=flatcar_production_qemu_uefi_image.img \
+  -device virtio-blk-pci,drive=blk,bootindex=1 \
+  -netdev user,id=eth0,hostfwd=tcp::2222-:22 -device virtio-net-pci,netdev=eth0 \
+  -fw_cfg name=opt/org.flatcar-linux/config,file=out/cl01.ign -snapshot
+```
+
+The guest reaches the host at `10.0.2.2` (QEMU's host address), so a local NFS
+server must listen there. The wrapper's `-f` forwards host->guest, not
+guest->host.
+
+**The mount cannot be tested on Docker Desktop.** Its kernel refuses nfsd in a
+container network namespace (`rpc.nfsd: writing fd to kernel failed: errno 111`,
+`does not support NFS export`), so no containerised NFS server works. Prove the
+mount at Phase 0/1 against the real TrueNAS export, or with a host-level nfsd.
+Everything else is testable: user, SSH keys and hardening, `update.conf`, the
+units/timers, and Docker's `Requires=mnt-nas.mount` holding dockerd back while
+the export is missing.
+
+Swarm join, keepalived and the VIP are best tested on real hardware or multiple
+VMs.

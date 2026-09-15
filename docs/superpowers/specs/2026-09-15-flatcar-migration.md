@@ -141,6 +141,21 @@ mounts before deploying to TrueNAS. The Immich Postgres image is multi-arch.
 **Limits:** swarm join tokens, the keepalived sysext, and the VIP are best tested
 on real hardware or multiple QEMU VMs.
 
+**Findings from the first local run (2026-09-15):**
+
+- The wrapper's default HVF acceleration hangs at the UEFI banner on macOS 26
+  with QEMU 11.1.1 (100% CPU, no kernel output). Boot under TCG instead
+  (`-machine virt,accel=tcg,gic-version=3 -cpu cortex-a57`).
+- A containerised NFS server cannot work on Docker Desktop: its kernel refuses
+  nfsd in a container netns (`rpc.nfsd: errno 111`, `does not support NFS
+  export`). The mount cannot be tested locally this way, so it is deferred to
+  Phase 0/1 against the real TrueNAS export.
+- Everything else is testable. The first run confirmed Flatcar 4757.2.0 applies
+  Ignition (core user and SSH keys, passwordless sudo, SSH hardening,
+  `update.conf`, the units and timers) and that Docker's
+  `Requires=mnt-nas.mount` correctly holds dockerd back when the export is
+  missing.
+
 ## 4. The sequence
 
 Two docker contexts are used throughout. Define them once:
