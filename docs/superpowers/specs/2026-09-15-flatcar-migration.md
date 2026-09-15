@@ -95,6 +95,12 @@ before touching real hardware. Docker supplies the tooling; QEMU boots a real
 Flatcar node. Docker cannot run Flatcar itself — it is a full OS with systemd as
 PID 1.
 
+**Context safety.** The local daemon and the cluster are different docker
+contexts (e.g. `desktop-linux` vs `swarm`). Never rely on the default: pass
+`--context <name>` or set `DOCKER_CONTEXT=<name>` on every command. A local
+validation run sent to a swarm context executes on a live node, and a
+`deploy.sh` run in a swarm context with unmigrated paths breaks live services.
+
 **Transpile and validate (Docker, seconds):**
 
 ```sh
