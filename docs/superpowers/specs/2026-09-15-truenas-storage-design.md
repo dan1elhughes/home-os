@@ -37,7 +37,8 @@ Tier B exports.
    via Butane/Ignition. Per-service Docker NFS volumes and iSCSI rejected.
 5. **The export maps all users (including root) to `PUID:PGID`** (`mapall`), so
    `linuxserver` apps, Immich's `3000`, and root-running apps all write as one
-   identity.
+   identity. The export is reachable from **any host**, so the configs can be
+   mounted and edited directly from a workstation.
 6. **Media/Immich blob exports stay as they are** (Docker `type: nfs` volumes) —
    explicitly not unified onto the new host-mount mechanism.
 7. **Flatcar Ignition configs live in this repo**, scoped to what storage needs
@@ -79,7 +80,8 @@ Tier B exports.
   it becomes a node-local volume, since it is a re-downloadable model cache.
 
 - NFS export settings:
-  - Allowed hosts: the three node IPs (`10.10.10.21-23`).
+  - Allowed hosts: **any** (`0.0.0.0/0`), so the configs can be mounted and
+    edited from a workstation, not only from the nodes.
   - `rw`, `sec=sys`, `nfsvers=4` (matches the existing exports and avoids the
     Flatcar 4.1/4.2 kernel regression).
   - `mapall` → `PUID:PGID`.
@@ -179,7 +181,7 @@ NFS blob volumes are untouched.
 ### 5. Data migration and cutover
 
 1. **TrueNAS prep.** Create `/mnt/SSD/cluster` and the four `/mnt/SSD/db/*`
-   datasets, set the config dataset to `PUID:PGID`, create the node-restricted
+   datasets, set the config dataset to `PUID:PGID`, create the open (`0.0.0.0/0`)
    `mapall` export, and deploy the DB app (firewalled to the swarm subnet).
 2. **Config copy (bridge).** While one node is still on the old OS, mount the new
    export at `/mnt/nas` and `rsync -aHAX --numeric-ids` each surviving
@@ -209,6 +211,10 @@ means reverting the compose changes and booting the previous OS image.
 - **NFS version on Flatcar** — 4.1/4.2 kernel regression; pin 4.0 and validate.
 - **`mapall` means any container can write any file on the shared dataset.**
   Accepted for a LAN-only home cluster.
+- **The config export is open to any host.** Anything on the LAN can mount it and
+  read/write app config as `PUID:PGID`, including secrets embedded in configs
+  (HA, Gitea, Traefik, etc.). Accepted for a private internal network, and
+  required so configs can be edited from a workstation.
 - **DB network exposure** — must be firewalled to the swarm subnet.
 
 ### 7. Out of scope
