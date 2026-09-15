@@ -16,6 +16,10 @@ Python. So MicroCeph (a snap) cannot run, `/mnt/cephfs` disappears, the Docker
 boot dependency `Requires=mnt-cephfs.mount` cannot be satisfied, and the
 `apt`-based Ansible roles cannot run.
 
+These are the **existing hosts, reformatted in place**. The nodes keep their
+names and addresses, so there is no new hardware and no old-node cleanup beyond
+the reinstall itself.
+
 Decisions already made:
 
 1. **NAS = the existing TrueNAS SCALE box** (`10.10.10.60`), not a new appliance.
@@ -38,8 +42,15 @@ Decisions already made:
 10. **DB credentials unchanged** — no churn during migration.
 11. **Snapshots and backups are out of scope.**
 12. **The `home-assistant` repo's recorder change is in scope** with this work.
-13. **Migration is progressive**: single-node swarm on cl01 first, services moved
-    one at a time, ingress cut over last, then expand to three nodes.
+13. **Migration is progressive: 0 → 1 → 3.** The new swarm goes from zero nodes
+    to one (cl01), and only at the end to three (cl02 and cl03 together). It
+    cannot go one node at a time after cl01: the old swarm has three managers,
+    so removing cl01 leaves two (still quorate), but removing a second would
+    leave it with one and lose quorum. Services move one at a time in between;
+    ingress is cut over last.
+14. **The three Flatcar nodes are the existing nodes, reformatted in place** —
+    same names and addresses, no new hardware. There is no old-node cleanup
+    step: reinstalling wipes the old OS (and its MicroCeph data) on each node.
 
 ## 2. Target state (reference)
 
@@ -173,6 +184,8 @@ docker context create cl01 --docker "host=ssh://core@10.10.10.21"
 export NEW_CONTEXT=cl01
 ```
 
+The phases follow the **0 → 1 → 3** shape: one node, then the other two together.
+
 ### Phase 0 — TrueNAS prep
 
 1. Create dataset `/mnt/SSD/cluster` on the SSD pool; owner `PUID:PGID`.
@@ -199,6 +212,9 @@ export NEW_CONTEXT=cl01
 2. Remove cl01 from the old swarm, leaving cl02/cl03 as its two managers:
    `DOCKER_CONTEXT=$OLD_CONTEXT docker node demote cl01` then `docker node rm cl01`.
    (Or `docker swarm leave --force` on cl01 after everything is frozen there.)
+   This is the **last node removed from the old swarm until Phase 4**. It now has
+   two managers (still quorate); removing a second before the end would leave it
+   with one and lose quorum. cl01 is then reformatted in place.
 3. Render cl01's Butane config (common + cl01 values) and transpile:
    `butane --pretty --strict cl01.bu -o cl01.ign`.
 4. Install Flatcar on cl01 with `cl01.ign` (delivery mechanism out of scope).
@@ -283,8 +299,10 @@ and serves from the new swarm; certs are valid (copied `acme.json`).
 
 1. Get the manager join token on cl01: `docker swarm join-token manager -q`.
 2. Render cl02/cl03 Butane configs with that token and keepalived `BACKUP`.
-3. Reinstall cl02/cl03 as Flatcar with their configs. They leave the old swarm
-   (which then dies) and join the new one.
+3. Reinstall cl02/cl03 in place as Flatcar with their configs. Do both here:
+   the old swarm is down to two managers, so removing either one drops it to one
+   and it loses quorum. That is safe at this point because the old swarm is idle
+   (Phase 3 scaled its services to 0). Both nodes join the new swarm.
 4. Rebalance service placement: `./rebalance.sh` (with `DOCKER_CONTEXT=$NEW_CONTEXT`).
 
 **Verify:** `docker node ls` shows three managers, all `Ready`/`Active`;
@@ -294,8 +312,11 @@ after rebalance.
 ### Phase 5 — Retire the old
 
 1. Confirm nothing still runs on the old cluster.
-2. Decommission MicroCeph and reclaim the node disks — **keep the Ceph data
-   until everything has been verified.**
+2. There is **no old-node cleanup**: MicroCeph went with the old OS when each
+   node was reformatted in place, and the node disks were reclaimed by the
+   Flatcar install. The Ceph data survived on cl02/cl03 until their Phase 4
+   reinstall, which is why verification finishes first. Confirm no node still
+   runs the old OS or MicroCeph.
 3. Remove the old docker context.
 
 **Verify:** all services on the new swarm, all data intact, configs editable from
@@ -314,8 +335,15 @@ a workstation over NFS.
 - **keepalived** depends on a community sysext and on the `auth_pass` being
   injected at render time; it must stay stopped on cl01 until Phase 3 or both
   clusters claim the VIP.
-- **Old-swarm quorum** — after cl01 leaves, the old swarm runs on two managers,
-  so a single failure freezes its services.
+- **Old-swarm quorum fixes the migration shape.** After cl01 leaves, the old
+  swarm runs on two managers: a single failure freezes its services, and
+  removing a second node would drop it to one and lose quorum outright. So the
+  remaining two nodes move together, at the end, once the old swarm is idle.
+- **Reformatting cl01 removes one MicroCeph OSD while the old swarm still reads
+  `/mnt/cephfs`.** With the usual three-replica pool that leaves two replicas,
+  which stays writable at the default `min_size=2` but has no fault tolerance
+  left. Check the pool's `min_size` before Phase 1 and do the Phase 2 config
+  copies early.
 - **Two swarms, two contexts** — always set `DOCKER_CONTEXT` explicitly.
 - **Ignition runs at first boot only** — anything added later (keepalived on
   cl01) has to be include-but-disabled, or applied out of band.
