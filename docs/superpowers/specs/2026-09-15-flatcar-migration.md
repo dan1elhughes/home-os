@@ -192,10 +192,14 @@ The phases follow the **0 → 1 → 3** shape: one node, then the other two toge
 Boot each node from the netboot.xyz Flatcar menu entry. It prompts for the
 Ignition URL and then boots the PXE kernel with
 `ignition.config.url=<url> flatcar.first_boot=1` (plus
-`flatcar.autologin=tty1/ttyS0`). The rendered `.ign` for the node must be
-reachable over HTTP on the internal network — it carries the VRRP password and
-the manager join token, so do not serve it publicly. `flatcar.first_boot=1` is
-what makes Ignition run; the menu's `ignition_config` entry sets it.
+`flatcar.autologin=tty1/ttyS0`). `flatcar.first_boot=1` is what makes Ignition
+run; the menu's `ignition_config` entry sets it.
+
+Serve the rendered configs from the workstation with `ignition/serve.sh`, run in
+its own terminal (it is a foreground server and blocks until Ctrl-C). It serves
+`ignition/out/` on the LAN address, prints the URL to paste at the prompt (for
+example `http://10.10.10.142:8000/cl01.ign`), and binds to that address only
+because the files carry the VRRP password and the manager join token.
 
 **A PXE boot is RAM-only; it does not install to disk.** The PXE image has
 `flatcar-install`, so after it boots, install and reboot:

@@ -3,7 +3,7 @@
 Replaces Ansible for the three swarm nodes. Each node is a Flatcar Container
 Linux host with no persistent local data: its Ignition config provisions the
 `core` user, mounts the TrueNAS config export at `/mnt/nas`, and joins the
-swarm. Config delivery after first boot is out of scope (runbook decision 7).
+swarm. Config delivery is netboot.xyz PXE (see Serve for PXE).
 
 ## Layout
 
@@ -17,6 +17,7 @@ files/keepalived.conf.tmpl  VRRP config template (auth_pass injected at render t
 files/swarm-init.service.tmpl   cl01: docker swarm init
 files/swarm-join.service.tmpl   cl02/cl03: docker swarm join with baked token
 render.sh                   render -> butane -> ignition-validate (all in Docker)
+serve.sh                    serve out/ over HTTP for netboot.xyz (foreground)
 out/                        generated *.bu / *.ign (git-ignored; hold secrets)
 ```
 
@@ -41,9 +42,26 @@ SWARM_JOIN_TOKEN='<manager join token>' \
 `ignition-validate`. `out/` is git-ignored because the rendered configs contain
 the VRRP password and the swarm join token.
 
-To pass a rendered config to Flatcar, use the `.ign` file (for example with
-`coreos-installer` or the `flatcar_production_qemu.sh -i` wrapper). The delivery
-mechanism itself is out of scope.
+## Serve for PXE (netboot.xyz)
+
+Delivery is the netboot.xyz Flatcar menu entry, which boots the PXE kernel with
+`ignition.config.url=<url> flatcar.first_boot=1`. Serve the rendered files from
+this host, **in its own terminal** — it is a foreground server, so it blocks
+until you Ctrl-C it:
+
+```sh
+./serve.sh            # or: ./serve.sh <port>   (default 8000)
+```
+
+It binds to this host's LAN address (not `0.0.0.0`) and prints the URL, e.g.
+`http://10.10.10.142:8000/cl01.ign`; use that as the `ignition.config.url` at
+the menu prompt. Only `out/` is served, and it holds the VRRP password and the
+manager join token, so keep this host awake and on the internal network while a
+node installs. Override the address with `BIND_IP=<addr>` if detection is wrong.
+
+A PXE boot runs Flatcar in RAM. The PXE image includes `flatcar-install`, which
+must write the node to disk before it is a real node; see Delivery in the
+runbook.
 
 ## What this replaces
 
