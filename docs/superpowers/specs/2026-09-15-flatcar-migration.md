@@ -415,8 +415,6 @@ a workstation over NFS.
 
 - The literal `PUID:PGID` values and the TrueNAS user they map to.
 - Final dataset naming under the SSD pool.
-- The LAN interface name (the old role used `ansible_default_ipv4.interface`).
-- The manager join token for the baked follower configs.
 - How keepalived is currently running on the old cluster, so it can be stopped
   cleanly at Phase 3.
 - The MicroCeph pool's `min_size`, to be sure `/mnt/cephfs` stays writable after

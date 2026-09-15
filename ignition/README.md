@@ -82,9 +82,9 @@ upgrades, `loginctl enable-linger`, and the Raspberry Pi `init.sh`.
   binary. It comes from a community `keepalived` systemd-sysext that is not
   wired up yet; the service is included but `enabled: false`. Add the sysext
   and enable the unit at Phase 3 (cl01) and Phase 4 (followers).
-- **`KEEPALIVED_INTERFACE`** defaults to `eth0` in the node env files. Confirm
-  the real LAN interface before Phase 3 (the old role used
-  `ansible_default_ipv4.interface`).
+- **`KEEPALIVED_INTERFACE`** is `enp1s0`, taken from the existing nodes
+  (`ip -br link`; `wlo1` is the unused Wi-Fi). Flatcar uses the same predictable
+  naming, but confirm it on the booted node before Phase 3.
 - **NFS is pinned to 4.0** (`nfsvers=4.0` in `mnt-nas.mount`) because 4.1/4.2
   regress on the Flatcar kernel.
 - **The join token is baked in**, so it goes stale if the swarm is
