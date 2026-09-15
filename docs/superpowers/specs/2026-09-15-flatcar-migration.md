@@ -195,6 +195,13 @@ Ignition URL and then boots the PXE kernel with
 `flatcar.autologin=tty1/ttyS0`). `flatcar.first_boot=1` is what makes Ignition
 run; the menu's `ignition_config` entry sets it.
 
+netboot.xyz itself runs on TrueNAS at `10.10.10.60:31010`, and the custom
+Flatcar menu lives there. The `netboot` stack in this repo is only a Caddy proxy
+that exposes it at `netboot.danhughes.dev` through Traefik on the swarm. Do not
+use that hostname for PXE: a node being reinstalled must not depend on the swarm
+that is being migrated, and firmware has no internal DNS. Read the boot chain
+from `10.10.10.60:31010` directly.
+
 Serve the rendered configs from the workstation with `ignition/serve.sh`, run in
 its own terminal (it is a foreground server and blocks until Ctrl-C). It serves
 `ignition/out/` and prints the URL to paste at the prompt (for example
