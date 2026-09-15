@@ -4,8 +4,9 @@ Status: source of truth — sequential migration runbook
 Date: 2026-09-15
 
 This is the single document for the migration. Read it top to bottom. Section 1
-is why, section 2 is the target state, section 3 is the ordered sequence you
-execute, and sections 4–5 are risks and open items.
+is why, section 2 is the target state, section 3 is optional local testing,
+section 4 is the ordered sequence you execute, and sections 5–6 are risks and
+open items.
 
 ## 1. Context and decisions
 
@@ -87,7 +88,54 @@ values, transpiled with `butane --pretty --strict`):
 **Compose path mapping:** every `/mnt/cephfs/<x>` → `/mnt/nas/<x>`. DB services
 and their `depends_on` entries are removed; DB hosts become `10.10.10.60`.
 
-## 3. The sequence
+## 3. Local testing (optional pre-flight)
+
+Most of the Ignition config and the database app can be validated on a laptop
+before touching real hardware. Docker supplies the tooling; QEMU boots a real
+Flatcar node. Docker cannot run Flatcar itself — it is a full OS with systemd as
+PID 1.
+
+**Transpile and validate (Docker, seconds):**
+
+```sh
+docker run --rm -i quay.io/coreos/butane:release --pretty --strict < cl01.bu > cl01.ign
+docker run --pull=always --rm -i quay.io/coreos/ignition-validate:release - < cl01.ign
+```
+
+Butane catches YAML/schema errors; `ignition-validate` catches bad Ignition. Run
+this every time the Butane template changes.
+
+**Boot a real node (QEMU):** Flatcar ships QEMU images and a wrapper script. On
+Apple Silicon use the `arm64` image.
+
+```sh
+./flatcar_production_qemu_uefi.sh -i cl01.ign -f 2049:2049 -- -nographic -snapshot
+```
+
+`-snapshot` makes every boot a first boot, so the config can be iterated without
+restoring the image. Log in on port 2222 (or the serial console) and check:
+
+- `findmnt /mnt/nas` and `systemctl status mnt-nas.mount`
+- `systemctl show docker -p Requires` includes `mnt-nas.mount`
+- `docker node ls` shows one manager
+- `systemctl status docker-prune.timer reboot.timer`
+- `ls /mnt/nas`
+
+**NFS export (Docker):** run an NFS server container with a test export, and
+point a throwaway copy of the config's `What=` at `10.0.2.2` (QEMU's host
+address) instead of `10.10.10.60`. Because the mount pins `nfsvers=4`, only port
+2049 is needed, so `-f 2049:2049` works. A generic NFS container only
+approximates TrueNAS — fake ownership with `all_squash,anonuid,anongid`; it will
+not prove TrueNAS's `mapall` behaves identically.
+
+**Database app (Docker Compose):** run the four-container DB app as an ordinary
+compose project locally to validate images, environment, ports and dataset
+mounts before deploying to TrueNAS. The Immich Postgres image is multi-arch.
+
+**Limits:** swarm join tokens, the keepalived sysext, and the VIP are best tested
+on real hardware or multiple QEMU VMs.
+
+## 4. The sequence
 
 Two docker contexts are used throughout. Define them once:
 
@@ -224,7 +272,7 @@ after rebalance.
 **Verify:** all services on the new swarm, all data intact, configs editable from
 a workstation over NFS.
 
-## 4. Risks and accepted trade-offs
+## 5. Risks and accepted trade-offs
 
 - **SQLite on NFS** — mitigated by single replica and correct locking; already a
   known risk on CephFS (a past HA recorder corruption is noted in
@@ -246,7 +294,7 @@ a workstation over NFS.
 - **NFS version on Flatcar** — 4.1/4.2 kernel regression; pin 4.0.
 - **DB network exposure** — firewalled to the swarm subnet.
 
-## 5. Open items
+## 6. Open items
 
 - The literal `PUID:PGID` values and the TrueNAS user they map to.
 - Final dataset naming under the SSD pool.
