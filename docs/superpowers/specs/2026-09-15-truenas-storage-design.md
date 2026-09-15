@@ -38,13 +38,17 @@ Tier B exports.
    iSCSI (approach C) rejected.
 5. **Media/Immich blob exports stay as they are** (Docker `type: nfs` volumes) —
    explicitly not unified onto the new host-mount mechanism.
+6. **Flatcar provisioning is in scope and lives in this repo.** The Butane
+   configs needed for storage (the NFS mount unit and the Docker dependency
+   drop-in) are added here and transpiled to Ignition. Scope is bounded to what
+   storage needs — see the boundary below.
 
 ## Open questions
 
 - **SSD pool / dataset name.** Assumed `/mnt/SSD/cluster`; to confirm.
-- **Flatcar provisioning scope.** Is the Ignition/Butane config part of this
-  repo, or handled elsewhere with this work assuming Flatcar nodes already
-  exist?
+- **How Ignition is delivered** to the nodes (PXE/matchbox, `flatcar-install -i`,
+  or a hosted config URL). Storage only needs the file to exist and reach the
+  node; the delivery mechanism may be a separate concern.
 - **PUID/PGID values** (from 1Password env) and how they map to ownership on the
   TrueNAS dataset.
 - Whether to also run the TrueNAS DB app with the same credentials currently
@@ -74,11 +78,11 @@ Tier B exports.
   `radarr-config/`, `sonarr-config/`, `lidarr-config/`, `swiparr/`,
   `apprise-config/`, `apprise-attachments/`, `sponsorblock/`.
 
-  These are exactly today's CephFS directories **minus** the ones that only exist
-  to hold a database, which disappear when the DBs move to TrueNAS:
-  `homeassistant-postgres`, `gitea-db`, `uptime-kuma-mariadb`, `immich-postgres`,
-  and `immich-ml-cache` (which becomes a node-local volume — see compose
-  changes).
+  These are exactly today's CephFS directories, **minus** the ones that move
+  with the databases when the DBs become remote: `homeassistant-postgres`,
+  `gitea-db`, `uptime-kuma-mariadb`, `immich-postgres`. The `immich-ml-cache`
+  directory is also dropped — it becomes a node-local volume (see compose
+  changes), since it is a re-downloadable model cache.
 
 - Databases as one custom app (compose) on TrueNAS:
 
@@ -127,9 +131,29 @@ Butane → Ignition:
 
 - Enable `rpc-statd` if NFS locking is needed, or mount config `nolock` where a
   directory is strictly single-writer (Flatcar rpc-statd quirk).
-- Delete the MicroCeph tasks from `roles/swarm`.
+- Remove the MicroCeph tasks from `roles/swarm`, `roles/docker/files/after-mount.conf`,
+  and `roles/swarm/templates/snap_microceph_daemon_override.j2.conf` — all
+  superseded by the Ignition units above.
 - Docker data-root stays on the node's persistent state partition — containers
   are re-pullable, so node-local is fine.
+
+#### Repo layout and scope boundary
+
+The Butane config lives in a new `flatcar/` directory, one file per node role
+(all three nodes share the storage config), transpiled to Ignition JSON with
+`butane --pretty --strict`. Storage owns only:
+
+- the `mnt-nas.mount` unit,
+- the Docker `10-nas.conf` drop-in, so Docker does not start before `/mnt/nas`,
+- any `/etc` files those two need.
+
+**Explicitly out of scope** for this spec (separate work): base OS provisioning
+(users, SSH keys, sudo, the weekly-reboot timer), Docker data-root config, swarm
+init/join, the `keepalived` VIP role, and a `cockpit` replacement. All of these
+currently live in `apt`-based Ansible roles with no Flatcar equivalent; deciding
+what replaces each is a follow-on spec. This spec assumes an Ignition delivery
+mechanism exists and can carry the storage units — it does not define that
+mechanism.
 
 ### 4. Compose changes
 
