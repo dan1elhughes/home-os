@@ -53,11 +53,12 @@ until you Ctrl-C it:
 ./serve.sh            # or: ./serve.sh <port>   (default 8000)
 ```
 
-It binds to this host's LAN address (not `0.0.0.0`) and prints the URL, e.g.
-`http://10.10.10.142:8000/cl01.ign`; use that as the `ignition.config.url` at
-the menu prompt. Only `out/` is served, and it holds the VRRP password and the
-manager join token, so keep this host awake and on the internal network while a
-node installs. Override the address with `BIND_IP=<addr>` if detection is wrong.
+It listens on `0.0.0.0` by default and prints this host's LAN address to use,
+e.g. `http://10.10.10.142:8000/cl01.ign`; paste that as the
+`ignition.config.url` at the menu prompt. Only `out/` is served, and it holds
+the VRRP password and the manager join token, so run it on the trusted LAN and
+keep this host awake while a node installs. Override the bind address with
+`BIND_IP=<addr>`.
 
 A PXE boot runs Flatcar in RAM. The PXE image includes `flatcar-install`, which
 must write the node to disk before it is a real node; see Delivery in the

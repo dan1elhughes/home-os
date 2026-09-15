@@ -197,9 +197,10 @@ run; the menu's `ignition_config` entry sets it.
 
 Serve the rendered configs from the workstation with `ignition/serve.sh`, run in
 its own terminal (it is a foreground server and blocks until Ctrl-C). It serves
-`ignition/out/` on the LAN address, prints the URL to paste at the prompt (for
-example `http://10.10.10.142:8000/cl01.ign`), and binds to that address only
-because the files carry the VRRP password and the manager join token.
+`ignition/out/` and prints the URL to paste at the prompt (for example
+`http://10.10.10.142:8000/cl01.ign`). It listens on all interfaces, which is fine
+on the trusted LAN, but the files carry the VRRP password and the manager join
+token, so do not leave it running on an untrusted network.
 
 **A PXE boot is RAM-only; it does not install to disk.** The PXE image has
 `flatcar-install`, so after it boots, install and reboot:

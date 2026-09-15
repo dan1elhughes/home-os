@@ -5,17 +5,18 @@
 #
 #   ./serve.sh [port]          # default 8000
 #
-# Serves out/ only, and binds to this host's LAN address rather than 0.0.0.0:
-# the files contain the VRRP password and the manager join token. Keep it on
-# the internal network, and keep the host awake while a node is installing.
-# Override the detected address with BIND_IP=<addr>.
+# Serves out/ only. The files carry the VRRP password and the manager join
+# token, so run this on the trusted LAN and keep the host awake while a node is
+# installing. Listens on 0.0.0.0 by default; override with BIND_IP=<addr>.
 set -euo pipefail
 cd "$(dirname "$0")"
 
 port="${1:-8000}"
+bind="${BIND_IP:-0.0.0.0}"
 
 [ -d out ] || { echo "no out/ yet -- run ./render.sh <node> first" >&2; exit 1; }
 
+# Best-effort LAN address, only to print a usable URL.
 detect_ip() {
     if command -v ipconfig >/dev/null 2>&1; then
         # macOS: en0 is usually the wired/wifi primary.
@@ -25,10 +26,13 @@ detect_ip() {
     fi
 }
 
-ip="${BIND_IP:-$(detect_ip)}"
-[ -n "$ip" ] || { echo "could not detect a LAN address; set BIND_IP=<addr>" >&2; exit 1; }
+if [ "$bind" = "0.0.0.0" ]; then
+    url_ip="$(detect_ip)"
+else
+    url_ip="$bind"
+fi
 
-echo "serving $(pwd)/out on http://${ip}:${port}/"
-echo "  ignition.config.url=http://${ip}:${port}/<node>.ign"
+echo "serving $(pwd)/out on port ${port} (bind ${bind})"
+[ -n "${url_ip:-}" ] && echo "  ignition.config.url=http://${url_ip}:${port}/<node>.ign"
 echo "Ctrl-C to stop"
-exec python3 -m http.server "$port" --bind "$ip" --directory out
+exec python3 -m http.server "$port" --bind "$bind" --directory out
