@@ -77,6 +77,9 @@ upgrades, `loginctl enable-linger`, and the Raspberry Pi `init.sh`.
   reboot one at a time so the swarm keeps quorum. Change the slots in
   `nodes/*.env` (`REBOOT_WINDOW_START`, `REBOOT_ONCALENDAR`).
 - **`core` is the login user**.
+- **Hostname comes from `/etc/hostname`.** Flatcar defaults to `localhost`, so
+  Ignition writes `${NODE_NAME}` per node. Without it every swarm node would be
+  named `localhost`.
 
 ## Local pre-flight (optional)
 

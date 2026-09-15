@@ -79,7 +79,8 @@ dirs and `immich-ml-cache`:
 values, transpiled with `butane --pretty --strict`):
 
 - Common: `core` user with embedded SSH keys, passwordless sudo, docker group;
-  SSH hardening; `mnt-nas.mount`; Docker drop-in `10-nas.conf`; docker-prune
+  hostname (`/etc/hostname`); SSH hardening; `mnt-nas.mount`; Docker drop-in
+  `10-nas.conf`; docker-prune
   service+timer; reboot timer; `rpc-statd`.
 - cl01: `swarm-init.service`; keepalived included but **disabled** until Phase 3.
 - cl02/cl03 (Phase 4): `swarm-join.service` with the baked manager token;
@@ -155,6 +156,11 @@ on real hardware or multiple QEMU VMs.
   `update.conf`, the units and timers) and that Docker's
   `Requires=mnt-nas.mount` correctly holds dockerd back when the export is
   missing.
+- A second run with the Docker drop-in stripped from the rendered config (test
+  only) confirmed the rest: `docker.service` active, `swarm.service` active with
+  one manager (`docker node ls`), the staggered `reboot.timer`, and a working
+  container. That run also exposed that Flatcar defaults the hostname to
+  `localhost`, so Ignition now writes `/etc/hostname` from `NODE_NAME`.
 
 ## 4. The sequence
 

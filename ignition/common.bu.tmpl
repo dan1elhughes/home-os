@@ -22,6 +22,14 @@ passwd:
 
 storage:
   files:
+    # Flatcar defaults the hostname to "localhost". Set it explicitly, or every
+    # swarm node ends up with the same name.
+    - path: /etc/hostname
+      overwrite: true
+      mode: 0644
+      contents:
+        inline: ${NODE_NAME}
+
     - path: /etc/sudoers.d/core
       mode: 0440
       contents:
