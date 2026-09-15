@@ -160,8 +160,10 @@ export NEW_CONTEXT=cl01
 3. Create the NFS export for `/mnt/SSD/cluster`: allowed hosts `0.0.0.0/0`, `rw`,
    `sec=sys`, `nfsvers=4`, `mapall` → `PUID:PGID`.
 4. Deploy the database custom app: the four containers, host-path mounts to the
-   `db` datasets, ports `5432`/`3306` bound on `10.10.10.60`, firewall restricted
-   to `10.10.10.21-23`.
+   `db` datasets, ports bound on `10.10.10.60`, firewall restricted to
+   `10.10.10.21-23`. The compose app is `truenas-databases/`. Three Postgres
+   instances cannot share one host IP and port, so each gets its own: HA 5432,
+   immich 5433, gitea 5434, kuma 3306.
 
 **Verify:**
 - `showmount -e 10.10.10.60` lists `/mnt/SSD/cluster`.
@@ -218,7 +220,7 @@ after restoring its config.
 **Per-service notes:**
 
 - **gitea (2.1)** — config `gitea-config`; DB `gitea-postgres`. Remove the `db`
-  service; set `GITEA__database__HOST=10.10.10.60:5432`.
+  service; set `GITEA__database__HOST=10.10.10.60:5434`.
 - **uptime-kuma (2.2)** — config `uptime-kuma`, `autokuma-data`; DB
   `kuma-mariadb`. Remove `mariadb`; set `UPTIME_KUMA_DB_HOSTNAME=10.10.10.60`.
 - **apprise (2.3)** — config `apprise-config`, `apprise-attachments`; no DB.
@@ -231,8 +233,9 @@ after restoring its config.
   `tasmoadmin-config`, `predbat`; DB `homeassistant-postgres`. Remove the
   `postgres` service and the `depends_on`. In the **home-assistant** repo,
   change `static/recorder.yaml` to `@10.10.10.60:5432`, then rebuild and upload.
-- **immich (2.7)** — DB `immich-postgres`. Set `DB_HOSTNAME=10.10.10.60` on the
-  server and microservices; remove the `immich-postgres` service and `pgdata`
+- **immich (2.7)** — DB `immich-postgres`. Set `DB_HOSTNAME=10.10.10.60` and
+  `DB_PORT=5433` on the server and microservices; remove the `immich-postgres`
+  service and `pgdata`
   volume; change `ml-cache` to a plain node-local volume. `photos`/`uploads_*`
   NFS volumes unchanged.
 

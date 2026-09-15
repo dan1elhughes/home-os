@@ -1,0 +1,13 @@
+[Unit]
+Description=Initialise single-node Docker Swarm
+After=docker.service network-online.target
+Requires=docker.service
+ConditionPathExists=!/var/lib/docker/swarm/state.json
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/bin/docker swarm init --advertise-addr ${NODE_IP}
+
+[Install]
+WantedBy=multi-user.target

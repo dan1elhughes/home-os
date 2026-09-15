@@ -18,8 +18,8 @@ services:
       - "443:443"
     volumes:
       - "/var/run/docker.sock:/var/run/docker.sock:ro"
-      - "/mnt/cephfs/traefik-config:/etc/traefik"
-      - "/mnt/cephfs/traefik-config-letsencrypt:/letsencrypt"
+      - "/mnt/nas/traefik-config:/etc/traefik"
+      - "/mnt/nas/traefik-config-letsencrypt:/letsencrypt"
     environment:
       - CF_DNS_API_TOKEN=${CF_API_TOKEN}
     deploy:

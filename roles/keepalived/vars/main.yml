@@ -1,2 +1,0 @@
----
-keepalived_password: "{{ lookup('env', 'KEEPALIVED_PASSWORD') }}"

@@ -1,6 +1,7 @@
 # Agent notes — home-os
 
-Docker Swarm / Ansible infra. Stacks live under `stacks/<name>/`; deploy from
+Docker Swarm + Flatcar infra. Nodes are provisioned by Ignition
+(`ignition/`); Ansible is retired. Stacks live under `stacks/<name>/`; deploy from
 inside the `stacks/` directory with `DOCKER_CONTEXT=swarm ./deploy.sh <stack>`
 (or switch to the `swarm` context first). The script expects stack names relative
 to `stacks/`, wraps `op run` for 1Password secrets, content-hashes any

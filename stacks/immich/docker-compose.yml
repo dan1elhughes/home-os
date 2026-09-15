@@ -4,11 +4,11 @@ services:
     image: ghcr.io/immich-app/immich-server:v3.2.0
     user: "3000:3000"
     environment:
-      DB_HOSTNAME: immich-postgres
+      DB_HOSTNAME: 10.10.10.60
       DB_USERNAME: immich
       DB_PASSWORD: immich
       DB_DATABASE_NAME: immich
-      DB_PORT: "5432"
+      DB_PORT: "5433"
       REDIS_HOSTNAME: immich-redis
       REDIS_PASSWORD: immich
       UPLOAD_LOCATION: /data
@@ -43,11 +43,11 @@ services:
     image: ghcr.io/immich-app/immich-server:v3.2.0
     user: "3000:3000"
     environment:
-      DB_HOSTNAME: immich-postgres
+      DB_HOSTNAME: 10.10.10.60
       DB_USERNAME: immich
       DB_PASSWORD: immich
       DB_DATABASE_NAME: immich
-      DB_PORT: "5432"
+      DB_PORT: "5433"
       REDIS_HOSTNAME: immich-redis
       REDIS_PASSWORD: immich
       UPLOAD_LOCATION: /data
@@ -74,22 +74,6 @@ services:
       - ml-cache:/cache
     deploy:
       mode: global
-      labels:
-        - "traefik.enable=false"
-    networks:
-      - main
-
-  # --- Postgres ---
-  immich-postgres:
-    image: ghcr.io/immich-app/postgres:18-vectorchord0.5.3
-    environment:
-      POSTGRES_PASSWORD: immich
-      POSTGRES_USER: immich
-      POSTGRES_DB: immich
-      POSTGRES_INITDB_ARGS: "--data-checksums"
-    volumes:
-      - pgdata:/var/lib/postgresql
-    deploy:
       labels:
         - "traefik.enable=false"
     networks:
@@ -154,18 +138,10 @@ volumes:
       type: "nfs"
       o: "addr=10.10.10.60,nfsvers=4"
       device: ":/mnt/SSD/local/thumbs"
-  pgdata:
-    driver: local
-    driver_opts:
-      type: "none"
-      o: "bind"
-      device: "/mnt/cephfs/immich-postgres"
+  # Machine-learning model cache. Node-local by design: it is a disposable
+  # cache and there is no reason to share it over NFS.
   ml-cache:
     driver: local
-    driver_opts:
-      type: "none"
-      o: "bind"
-      device: "/mnt/cephfs/immich-ml-cache"
 
 networks:
   main:

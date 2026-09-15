@@ -7,8 +7,8 @@ services:
       - TZ=${TZ?error}
       - APPRISE_ATTACH_SIZE=10 # in Mb
     volumes:
-      - "/mnt/cephfs/apprise-config:/config"
-      - "/mnt/cephfs/apprise-attachments:/attachments"
+      - "/mnt/nas/apprise-config:/config"
+      - "/mnt/nas/apprise-attachments:/attachments"
     deploy:
       labels:
         - "traefik.enable=true"

@@ -1,0 +1,147 @@
+# Common Flatcar Butane config. render.sh substitutes ${...} per node and
+# transpiles it to Ignition. Never deploy the files under out/ directly.
+#
+# Secrets (KEEPALIVED_PASSWORD, SWARM_JOIN_TOKEN) are injected at render time
+# from the environment and never committed.
+#
+# This replaces the old Ansible roles: common (SSH hardening, sudo, reboot),
+# docker (docker prune), swarm (init/join, cephfs mount dependency) and
+# keepalived.
+variant: flatcar
+version: 1.1.0
+
+passwd:
+  users:
+    # Flatcar's core user already has passwordless sudo; the drop-in below
+    # makes that explicit. Docker group gives docker access without sudo.
+    - name: core
+      groups:
+        - docker
+      ssh_authorized_keys_local:
+        - authorized_keys
+
+storage:
+  files:
+    - path: /etc/sudoers.d/core
+      mode: 0440
+      contents:
+        inline: |
+          core ALL=(ALL) NOPASSWD: ALL
+
+    - path: /etc/ssh/sshd_config.d/10-hardening.conf
+      mode: 0644
+      contents:
+        inline: |
+          PasswordAuthentication no
+          PermitRootLogin no
+
+    - path: /etc/keepalived/keepalived.conf
+      mode: 0644
+      contents:
+        local: keepalived.conf
+
+systemd:
+  units:
+    # --- TrueNAS config export ---------------------------------------------
+    - name: mnt-nas.mount
+      enabled: true
+      contents: |
+        [Unit]
+        Description=TrueNAS config export at /mnt/nas
+        After=network-online.target
+        Wants=network-online.target
+
+        [Mount]
+        What=${NAS_SERVER}:${NAS_EXPORT}
+        Where=/mnt/nas
+        Type=nfs
+        Options=nfsvers=4.0,_netdev,rw,noatime,hard,rsize=1048576,wsize=1048576
+
+        [Install]
+        WantedBy=multi-user.target
+
+    - name: rpc-statd.service
+      enabled: true
+
+    # Docker must not start until the config export is mounted. Replaces the
+    # old /usr/lib/systemd/system/docker.service.d/after-mount.conf.
+    - name: docker.service
+      dropins:
+        - name: 10-nas.conf
+          contents: |
+            [Unit]
+            Requires=mnt-nas.mount
+            After=mnt-nas.mount
+
+    # --- Weekly Docker prune ------------------------------------------------
+    - name: docker-prune.service
+      contents: |
+        [Unit]
+        Description=Docker system prune with volumes
+
+        [Service]
+        Type=oneshot
+        ExecStart=/usr/bin/docker system prune --volumes -f
+
+    - name: docker-prune.timer
+      enabled: true
+      contents: |
+        [Unit]
+        Description=Run Docker prune weekly
+
+        [Timer]
+        OnCalendar=Sun *-*-* 03:00:00
+        RandomizedDelaySec=1h
+        Persistent=true
+
+        [Install]
+        WantedBy=timers.target
+
+    # --- Weekly reboot ------------------------------------------------------
+    - name: reboot.service
+      contents: |
+        [Unit]
+        Description=Weekly reboot
+
+        [Service]
+        Type=oneshot
+        ExecStart=/usr/bin/systemctl reboot
+
+    - name: reboot.timer
+      enabled: true
+      contents: |
+        [Unit]
+        Description=Weekly reboot (Sunday 02:00-03:00)
+
+        [Timer]
+        OnCalendar=Sun *-*-* 02:00:00
+        RandomizedDelaySec=1h
+        Persistent=true
+
+        [Install]
+        WantedBy=timers.target
+
+    # --- Swarm membership ---------------------------------------------------
+    # One unit name, two bodies: render.sh picks swarm-init.service for cl01
+    # and swarm-join.service for the followers via ${SWARM_UNIT_FILE}.
+    - name: swarm.service
+      enabled: true
+      contents_local: ${SWARM_UNIT_FILE}
+
+    # --- keepalived ---------------------------------------------------------
+    # Included but disabled: the binary comes from a community Flatcar sysext
+    # that is not wired up yet. Enable out of band at Phase 3.
+    - name: keepalived.service
+      enabled: false
+      contents: |
+        [Unit]
+        Description=Keepalived
+        After=network-online.target
+        Wants=network-online.target
+
+        [Service]
+        ExecStart=/usr/bin/keepalived --dont-fork --log-console
+        Restart=on-failure
+
+        [Install]
+        WantedBy=multi-user.target

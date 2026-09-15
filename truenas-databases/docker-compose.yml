@@ -1,0 +1,91 @@
+# TrueNAS SCALE custom app: the four databases that used to run on the swarm.
+#
+# This runs on the NAS (10.10.10.60), NOT on the swarm. Do not add it under
+# stacks/ -- stacks/deploy.sh would try to deploy it to the swarm.
+#
+# Local syntax check (no NAS needed):
+#   docker compose -f docker-compose.yml config
+#
+# All four containers share one host IP, so each Postgres needs its own host
+# port. The runbook's single "5432" cannot apply to three Postgres instances.
+# Port map (see README.md):
+#   homeassistant-postgres  5432   (recorder connects to @10.10.10.60:5432)
+#   immich-postgres         5433
+#   gitea-postgres          5434
+#   kuma-mariadb            3306
+name: truenas-databases
+
+services:
+  homeassistant-postgres:
+    image: postgres:18-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: homeassistant
+      POSTGRES_PASSWORD: POSTGRES
+      POSTGRES_DB: homeassistant
+    ports:
+      - "10.10.10.60:5432:5432"
+    volumes:
+      - /mnt/SSD/db/homeassistant:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U homeassistant -d homeassistant"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  immich-postgres:
+    image: ghcr.io/immich-app/postgres:18-vectorchord0.5.3
+    restart: unless-stopped
+    environment:
+      POSTGRES_PASSWORD: immich
+      POSTGRES_USER: immich
+      POSTGRES_DB: immich
+      POSTGRES_INITDB_ARGS: "--data-checksums"
+    ports:
+      - "10.10.10.60:5433:5432"
+    volumes:
+      - /mnt/SSD/db/immich:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U immich -d immich"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  gitea-postgres:
+    image: postgres:18.6
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: gitea
+      POSTGRES_PASSWORD: gitea
+      POSTGRES_DB: gitea
+    ports:
+      - "10.10.10.60:5434:5432"
+    volumes:
+      - /mnt/SSD/db/gitea:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U gitea -d gitea"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  kuma-mariadb:
+    image: mariadb:12.3
+    restart: unless-stopped
+    environment:
+      MARIADB_ROOT_PASSWORD: mariadb
+      MARIADB_DATABASE: kuma
+      MARIADB_USER: mariadb
+      MARIADB_PASSWORD: mariadb
+    ports:
+      - "10.10.10.60:3306:3306"
+    volumes:
+      - /mnt/SSD/db/kuma:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
