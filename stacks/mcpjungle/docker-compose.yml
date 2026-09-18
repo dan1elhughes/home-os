@@ -18,6 +18,11 @@ services:
       # /host inside the container. Deliberately a single directory, not the
       # whole cephfs share — the filesystem server can write anywhere in /host.
       - "/mnt/cephfs/mcpjungle-host:/host:rw"
+      # Admin CLI conf (registry URL + admin access token) persisted on cephfs
+      # so `docker exec /mcpjungle ...` keeps working across container
+      # recreates. The file must exist on the host before the container starts
+      # (swarm bind-mount requirement); see /mnt/cephfs/mcpjungle-conf/.
+      - "/mnt/cephfs/mcpjungle-conf/.mcpjungle.conf:/root/.mcpjungle.conf:rw"
     depends_on:
       - db
     deploy:
