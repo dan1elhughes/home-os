@@ -38,7 +38,7 @@ services:
         - "kuma.mcpjungle.http.url=https://mcp.danhughes.dev/health"
 
   db:
-    image: postgres:17
+    image: postgres:18
     environment:
       - POSTGRES_USER=mcpjungle
       - POSTGRES_PASSWORD=mcpjungle
