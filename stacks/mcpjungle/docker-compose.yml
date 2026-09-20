@@ -46,9 +46,8 @@ services:
       - TZ=${TZ?error}
     volumes:
       # Postgres 18+ stores the cluster in a versioned subdirectory, so the
-      # mount must be the parent (/var/lib/postgresql), not .../data. The old
-      # /mnt/cephfs/mcpjungle-db (v17 layout) is kept as a rollback backup.
-      - "/mnt/cephfs/mcpjungle-db18:/var/lib/postgresql"
+      # mount must be the parent (/var/lib/postgresql), not .../data.
+      - "/mnt/cephfs/mcpjungle-db:/var/lib/postgresql"
     healthcheck:
       test: ["CMD-SHELL", "PGPASSWORD=mcpjungle pg_isready -U mcpjungle"]
       interval: 10s
