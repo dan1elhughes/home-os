@@ -36,7 +36,7 @@ services:
         - "kuma.internal.tag.color=#0066FF"
 
   autokuma:
-    image: ghcr.io/bigboot/autokuma:latest
+    image: ghcr.io/bigboot/autokuma:2.0.0
     environment:
       TZ: ${TZ?error}
       # No auth on Uptime Kuma, so just the URL is needed.
