@@ -107,7 +107,7 @@ services:
 
   # --- Immich Public Proxy ---
   ipp:
-    image: alangrainger/immich-public-proxy:3.3.1
+    image: alangrainger/immich-public-proxy:3.4.0
     environment:
       IMMICH_URL: http://immich-server:2283
     ports:
