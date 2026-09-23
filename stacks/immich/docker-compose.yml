@@ -110,6 +110,12 @@ services:
     image: alangrainger/immich-public-proxy:3.4.0
     environment:
       IMMICH_URL: http://immich-server:2283
+      CONFIG: |
+        {
+          "ipp": {
+            "allowDownload": 1
+          }
+        }
     ports:
       - "3000:3000"
     deploy:
