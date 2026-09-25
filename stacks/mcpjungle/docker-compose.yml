@@ -4,7 +4,7 @@ services:
     image: ghcr.io/mcpjungle/mcpjungle:0.4.6-stdio
     environment:
       - TZ=${TZ?error}
-      - DATABASE_URL=postgres://mcpjungle:mcpjungle@db:5432/mcpjungle
+      - DATABASE_URL=postgres://mcpjungle:mcpjungle@mcpjungle-db:5432/mcpjungle
       # Enterprise mode enables auth/ACLs. Set up the admin user and MCP
       # clients with `mcpjungle init-server` / `create mcp-client` (see
       # README). Without a client token the gateway refuses connections.
@@ -24,7 +24,7 @@ services:
       # (swarm bind-mount requirement); see /mnt/cephfs/mcpjungle-conf/.
       - "/mnt/cephfs/mcpjungle-conf/.mcpjungle.conf:/root/.mcpjungle.conf:rw"
     depends_on:
-      - db
+      - mcpjungle-db
     deploy:
       labels:
         - "traefik.enable=true"
@@ -37,7 +37,7 @@ services:
         - "kuma.mcpjungle.http.name=MCPJungle"
         - "kuma.mcpjungle.http.url=https://mcp.danhughes.dev/health"
 
-  db:
+  mcpjungle-db:
     image: postgres:18
     environment:
       - POSTGRES_USER=mcpjungle
