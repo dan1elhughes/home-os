@@ -35,7 +35,7 @@ services:
         - "traefik.http.services.mcpjungle.loadbalancer.server.port=8080"
         - "traefik.swarm.network=main"
         - "kuma.mcpjungle.http.name=MCPJungle"
-        - "kuma.mcpjungle.http.url=https://mcp.danhughes.dev/health"
+        - "kuma.mcpjungle.http.url=http://mcpjungle:8080/health"
 
   mcpjungle-db:
     image: postgres:18

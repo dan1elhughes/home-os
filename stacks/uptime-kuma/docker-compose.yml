@@ -29,7 +29,7 @@ services:
         # AutoKuma self-monitor: root returns 302 (redirect to /dashboard) —
         # Uptime Kuma has no 200 health endpoint, so accept 302.
         - "kuma.uptime-kuma.http.name=Uptime Kuma"
-        - "kuma.uptime-kuma.http.url=https://uptime-kuma.danhughes.dev"
+        - "kuma.uptime-kuma.http.url=http://uptime-kuma:3001/dashboard"
         - 'kuma.uptime-kuma.http.accepted_statuscodes=["200-299","302"]'
         # Define the "Internal" tag used by all AutoKuma-managed monitors.
         - "kuma.internal.tag.name=Internal"

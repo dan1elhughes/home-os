@@ -17,7 +17,7 @@ services:
         - "traefik.http.services.pairdrop.loadbalancer.server.port=3000"
         - "traefik.swarm.network=main"
         - "kuma.pairdrop.http.name=PairDrop"
-        - "kuma.pairdrop.http.url=https://pairdrop.danhughes.dev"
+        - "kuma.pairdrop.http.url=http://pairdrop:3000/"
 
 networks:
   default:

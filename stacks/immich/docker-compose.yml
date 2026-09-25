@@ -33,7 +33,7 @@ services:
         - "traefik.http.services.photos.loadbalancer.server.port=2283"
         - "traefik.swarm.network=main"
         - "kuma.photos.http.name=Immich"
-        - "kuma.photos.http.url=https://photos.danhughes.dev/api/server/ping"
+        - "kuma.photos.http.url=http://immich-server:2283/api/server/ping"
       replicas: 1
     networks:
       - main

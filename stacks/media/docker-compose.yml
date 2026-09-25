@@ -17,7 +17,7 @@ services:
         - "traefik.http.services.transmission.loadbalancer.server.port=9091"
         - "traefik.swarm.network=main"
         - "kuma.transmission.http.name=Transmission"
-        - "kuma.transmission.http.url=https://transmission.danhughes.dev/transmission/web/"
+        - "kuma.transmission.http.url=http://transmission:9091/transmission/web/"
 
   prowlarr:
     image: ghcr.io/linuxserver/prowlarr:2.5.2
@@ -39,7 +39,7 @@ services:
         - "traefik.http.services.prowlarr.loadbalancer.server.port=9696"
         - "traefik.swarm.network=main"
         - "kuma.prowlarr.http.name=Prowlarr"
-        - "kuma.prowlarr.http.url=https://prowlarr.danhughes.dev/ping"
+        - "kuma.prowlarr.http.url=http://prowlarr:9696/ping"
 
   radarr:
     image: ghcr.io/linuxserver/radarr:6.3.0
@@ -63,7 +63,7 @@ services:
         - "traefik.http.services.radarr.loadbalancer.server.port=7878"
         - "traefik.swarm.network=main"
         - "kuma.radarr.http.name=Radarr"
-        - "kuma.radarr.http.url=https://radarr.danhughes.dev/ping"
+        - "kuma.radarr.http.url=http://radarr:7878/ping"
 
   sonarr:
     image: ghcr.io/linuxserver/sonarr:4.0.19
@@ -87,7 +87,7 @@ services:
         - "traefik.http.services.sonarr.loadbalancer.server.port=8989"
         - "traefik.swarm.network=main"
         - "kuma.sonarr.http.name=Sonarr"
-        - "kuma.sonarr.http.url=https://sonarr.danhughes.dev/ping"
+        - "kuma.sonarr.http.url=http://sonarr:8989/ping"
 
   lidarr:
     image: ghcr.io/linuxserver/lidarr:3.1.0
@@ -111,7 +111,7 @@ services:
         - "traefik.http.services.lidarr.loadbalancer.server.port=8686"
         - "traefik.swarm.network=main"
         - "kuma.lidarr.http.name=Lidarr"
-        - "kuma.lidarr.http.url=https://lidarr.danhughes.dev/ping"
+        - "kuma.lidarr.http.url=http://lidarr:8686/ping"
 
   swiparr:
     image: ghcr.io/m3sserstudi0s/swiparr:1.5.1
@@ -135,7 +135,7 @@ services:
         - "traefik.http.services.swiparr.loadbalancer.server.port=4321"
         - "traefik.swarm.network=main"
         - "kuma.swiparr.http.name=Swiparr"
-        - "kuma.swiparr.http.url=https://swiparr.danhughes.dev/api/health"
+        - "kuma.swiparr.http.url=http://swiparr:4321/api/health"
 
 volumes:
   downloads:
