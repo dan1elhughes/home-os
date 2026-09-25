@@ -4,6 +4,8 @@ services:
     command:
       - "--entrypoints.web.address=:80"
       - "--entrypoints.websecure.address=:443"
+      - "--entrypoints.traefik.address=:8080"
+      - "--api.insecure=true"
       - "--entrypoints.websecure.http.tls=true"
 
       - "--providers.swarm=true"
