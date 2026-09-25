@@ -48,6 +48,28 @@
     state: started
     enabled: yes
 
+# Cluster-only: pin container DNS to the cluster DNS VIP. Docker's embedded
+# DNS snapshots upstreams from the host resolver and watches /etc/resolv.conf,
+# which is the systemd stub (127.0.0.53) and never changes — so netplan-side
+# uplink changes never propagate into running containers. An explicit daemon
+# setting removes that dependency entirely.
+- name: Configure container DNS resolver
+  ansible.builtin.copy:
+    dest: /etc/docker/daemon.json
+    mode: "0644"
+    content: |
+      {
+        "dns": ["{{ resolver_dns }}"]
+      }
+  when: resolver_dns is defined
+  register: daemon_json
+
+- name: Restart Docker to apply resolver change
+  ansible.builtin.service:
+    name: docker
+    state: restarted
+  when: daemon_json.changed  # noqa no-changed-when
+
 - name: Add user to docker group
   user:
     name: "{{ ansible_user }}"

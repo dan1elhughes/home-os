@@ -65,3 +65,35 @@
     upgrade: yes
     autoremove: yes
     clean: yes
+
+# Cluster-only: pin the resolver to the cluster DNS VIP and ignore DHCP-provided
+# servers, so lease renewals can't mix resolvers with divergent knowledge of
+# internal names (the dns stack serves *.danhughes.dev; the router cannot).
+# Netplan UNIONS nameserver lists across files (no override), so the cloud-init
+# file's 10.10.10.1 must be stripped at the source; 99-dns.yaml carries the
+# replacement plus the dhcp4-overrides switch. See dns stack docs for tradeoffs.
+- name: Remove cloud-init resolver pin
+  become: true
+  when: resolver_dns is defined
+  replace:
+    dest: /etc/netplan/50-cloud-init.yaml
+    regexp: '\n *nameservers:\n *addresses:\n *- 10\.10\.10\.1\n'
+    replace: '\n'
+  notify: netplan apply
+
+- name: Pin cluster DNS resolver
+  become: true
+  when: resolver_dns is defined
+  copy:
+    dest: /etc/netplan/99-dns.yaml
+    mode: "0600"
+    content: |
+      network:
+        version: 2
+        ethernets:
+          enp1s0:
+            nameservers:
+              addresses: [{{ resolver_dns }}]
+            dhcp4-overrides:
+              use-dns: false
+  notify: netplan apply
