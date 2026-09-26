@@ -1,0 +1,58 @@
+schema_version: 30
+http:
+  address: 0.0.0.0:3000
+  session_ttl: 720h
+# Empty users list disables authentication (internal VPN only).
+users: []
+auth_attempts: 5
+block_auth_min: 15
+theme: auto
+dns:
+  bind_hosts:
+    - 0.0.0.0
+  port: 53
+  upstream_dns:
+    - unbound:5353
+  # Docker's embedded resolver; dnsproxy needs an explicit bootstrap to
+  # resolve the upstream service name.
+  bootstrap_dns:
+    - 127.0.0.11
+  all_servers: false
+  cache_size: 1048576
+  cache_ttl_min: 0
+  cache_ttl_max: 300
+  cache_optimistic: false
+  ratelimit: 20
+  refuse_any: true
+  filtering_enabled: true
+  filters_update_interval: 24
+  blocked_services: []
+  parental_enabled: false
+  safebrowsing_enabled: false
+  safesearch_enabled: false
+  rewrites: []
+filters:
+  - enabled: true
+    url: https://adguardteam.github.io/HostlistsRegistry/assets/filter_1.txt
+    name: AdGuard DNS filter
+    id: 1
+  - enabled: true
+    url: https://adguardteam.github.io/HostlistsRegistry/assets/filter_2.txt
+    name: AdAway Default Blocklist
+    id: 2
+  - enabled: true
+    url: https://small.oisd.nl
+    name: OISD Small
+    id: 3
+querylog:
+  enabled: false
+  file_enabled: false
+  interval: 24h
+  size_memory: 1000
+  ignored: []
+statistics:
+  enabled: false
+  interval: 24h
+  ignored: []
+dhcp:
+  enabled: false

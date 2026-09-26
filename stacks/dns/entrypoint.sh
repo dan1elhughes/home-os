@@ -9,12 +9,8 @@ interval=${DNS_POLL_INTERVAL:-5}
 startup_attempts=${DNS_STARTUP_ATTEMPTS:-15}
 startup_interval=${DNS_STARTUP_INTERVAL:-2}
 
-case "${NEXTDNS_PROFILE_ID:-}" in
-    ''|*[!a-zA-Z0-9]*) echo 'Invalid NextDNS profile ID' >&2; exit 1 ;;
-esac
-[ "${#NEXTDNS_PROFILE_ID}" -eq 6 ] || { echo 'Invalid NextDNS profile ID' >&2; exit 1; }
 case "$startup_attempts" in
-    ''|*[!0-9]*) echo 'Invalid DNS startup attempts' >&2; exit 1 ;;
+    ''|*[!0-9]*) echo 'Invalid DNS startup attempts' >&2 ;;
 esac
 if ! [ "$startup_attempts" -gt 0 ] 2>/dev/null; then
     echo 'Invalid DNS startup attempts' >&2
@@ -24,15 +20,6 @@ fi
 umask 022
 mkdir -p "$runtime"
 chmod 755 "$runtime"
-cat > "$runtime/forward.conf" <<EOF
-forward-zone:
-    name: "."
-    forward-tls-upstream: yes
-    forward-first: no
-    forward-addr: 45.90.28.0@853#${NEXTDNS_PROFILE_ID}.dns.nextdns.io
-    forward-addr: 45.90.30.0@853#${NEXTDNS_PROFILE_ID}.dns.nextdns.io
-EOF
-chmod 644 "$runtime/forward.conf"
 
 last_hash=
 has_home_record() {

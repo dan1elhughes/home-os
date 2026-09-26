@@ -38,7 +38,7 @@ export_dns_config_hash() {
     if [ -f "$dir/dns/docker-compose.yml" ] || [ -d "$dir/dns" ]; then
         DNS_CONFIG_HASH="$(
             cd "$dir"
-            sha256sum dns/unbound.conf dns/entrypoint.sh dns/generator.py | sha256sum | cut -c1-12
+            sha256sum dns/unbound.conf dns/entrypoint.sh dns/generator.py dns/AdGuardHome.yaml dns/adguard-entrypoint.sh | sha256sum | cut -c1-12
         )"
         export DNS_CONFIG_HASH
     fi
