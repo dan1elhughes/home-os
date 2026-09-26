@@ -22,7 +22,10 @@ dns:
   cache_ttl_min: 0
   cache_ttl_max: 300
   cache_optimistic: false
-  ratelimit: 20
+  # 0 disables the per-client query rate limit. Tunneled clients (Tailscale
+  # subnet router) all share one SNAT source IP, so a limit there drops the
+  # whole tailnet's DNS in bursts.
+  ratelimit: 0
   refuse_any: true
   filtering_enabled: true
   filters_update_interval: 24
