@@ -3,7 +3,9 @@
 Status: source of truth — sequential migration runbook
 Date: 2026-09-15, revised 2026-09-24 (storage-first, one swarm, node-by-node),
 revised 2026-09-25 (new dns stack from master, VIP-bound records),
-revised 2026-09-26 (rebase onto master: resolver pinning moves to Ignition)
+revised 2026-09-26 (rebase onto master: resolver pinning moves to Ignition),
+revised 2026-09-26 (Phase 0 executed: datasets under SSD/local, database app
+live on TrueNAS)
 
 This is the single document for the migration. Read it top to bottom. Section 1
 is why, section 2 is the target state, section 3 is optional local testing,
@@ -67,7 +69,7 @@ Decisions already made:
     swap; the IP lands on Flatcar then, and DNS never changes.
 17. **mcpjungle is a fifth database.** Its Postgres data dir lives on CephFS
     today and cannot live on NFS. It joins the TrueNAS database app as
-    `mcpjungle-postgres` (port 5435, dataset `/mnt/SSD/db/mcpjungle`).
+    `mcpjungle-postgres` (port 5435, dataset `/mnt/SSD/local/cluster-db/mcpjungle`).
 18. **renovate stays.** It is stateless (no volumes, no DB), scheduled by
     `swarm-cronjob` — its cutover is a no-op redeploy.
 19. **Host and container resolvers stay pinned to the DNS VIP** (`10.10.10.20`).
@@ -93,8 +95,9 @@ Decisions already made:
 | B | `local` driver + `type: nfs` volume | TrueNAS | Media, downloads, Immich blobs |
 | C | none | — | Proxies, redis, ephemeral |
 
-**TrueNAS config dataset:** `/mnt/SSD/cluster`, exported as one NFS export and
-mounted at `/mnt/nas`. Subdirectories are today's CephFS names, minus the DB
+**TrueNAS config dataset:** `/mnt/SSD/local/cluster`, exported as one NFS export
+and mounted at `/mnt/nas`. It sits under `SSD/local` (not at the pool root as
+first planned) so the NAS's backup regime covers it. Subdirectories are today's CephFS names, minus the DB
 dirs and `immich-ml-cache`:
 
 `homeassistant`, `predbat`, `mosquitto`, `tasmoadmin-config`, `trmnl`,
@@ -107,11 +110,11 @@ dirs and `immich-ml-cache`:
 
 | Container | Image | Data dataset | Host port |
 |---|---|---|---|
-| `homeassistant-postgres` | `postgres:18-alpine` | `/mnt/SSD/db/homeassistant` | 5432 |
-| `immich-postgres` | `ghcr.io/immich-app/postgres:18-vectorchord0.5.3` | `/mnt/SSD/db/immich` | 5433 |
-| `gitea-postgres` | `postgres:18.6` | `/mnt/SSD/db/gitea` | 5434 |
-| `kuma-mariadb` | `mariadb:12.3` | `/mnt/SSD/db/kuma` | 3306 |
-| `mcpjungle-postgres` | `postgres:18.6` | `/mnt/SSD/db/mcpjungle` | 5435 |
+| `homeassistant-postgres` | `postgres:18-alpine` | `/mnt/SSD/local/cluster-db/homeassistant` | 5432 |
+| `immich-postgres` | `ghcr.io/immich-app/postgres:18-vectorchord0.5.3` | `/mnt/SSD/local/cluster-db/immich` | 5433 |
+| `gitea-postgres` | `postgres:18.6` | `/mnt/SSD/local/cluster-db/gitea` | 5434 |
+| `kuma-mariadb` | `mariadb:12.3` | `/mnt/SSD/local/cluster-db/kuma` | 3306 |
+| `mcpjungle-postgres` | `postgres:18.6` | `/mnt/SSD/local/cluster-db/mcpjungle` | 5435 |
 
 **Per-node Ignition contents** (rendered from a common fragment + per-node
 values, transpiled with `butane --pretty --strict`):
@@ -309,24 +312,40 @@ join token, so do not leave it running on an untrusted network.
    leaves the node diskless: docker and the swarm start in RAM and reset on every
    reboot.
 
-### Phase 0 — TrueNAS prep
+### Phase 0 — TrueNAS prep (executed 2026-09-26)
 
-1. Create dataset `/mnt/SSD/cluster` on the SSD pool; owner `1000:1000`.
-2. Create datasets `/mnt/SSD/db/{immich,homeassistant,gitea,kuma,mcpjungle}`.
-3. Create the NFS export for `/mnt/SSD/cluster`: allowed hosts `0.0.0.0/0`, `rw`,
-   `sec=sys`, `nfsvers=4`, `mapall` → `1000:1000`.
-4. Deploy the database custom app: the five containers, host-path mounts to the
-   `db` datasets, ports bound on `10.10.10.60`, firewall restricted to
-   `10.10.10.21-23`. The compose app is `truenas-databases/`. Three Postgres
-   instances cannot share one host IP and port, so each gets its own: HA 5432,
-   immich 5433, gitea 5434, mcpjungle 5435, kuma 3306.
+1. Dataset `/mnt/SSD/local/cluster` on the SSD pool; owner `1000:1000`. It sits
+   under `SSD/local` so the NAS backup regime covers it (the original plan put
+   it at the pool root). No user or group 1000 exists on the NAS, so the owner
+   is a placeholder: user `cluster` (UID 1000) and group `cluster1000` (GID
+   1000).
+2. Datasets
+   `/mnt/SSD/local/cluster-db/{immich,homeassistant,gitea,kuma,mcpjungle}`;
+   owner `999:999` on each — picked as user `netdata` + group `docker`, since
+   UID 999 already belongs to netdata, GID 999 to the docker group, and TrueNAS
+   refuses duplicate IDs. The containers only see the numbers.
+3. NFS export for `/mnt/SSD/local/cluster`: allowed hosts `0.0.0.0/0`, `rw`,
+   `sec=sys`, NFSv4 (the service already serves v3 and v4 — no service
+   changes), `mapall` → `1000:1000` via the `cluster`/`cluster1000` accounts.
+4. Database custom app installed from `truenas-databases/docker-compose.yml`
+   (volume paths amended to the `cluster-db` datasets): five containers, ports
+   bound on `10.10.10.60` — HA 5432, immich 5433, gitea 5434, mcpjungle 5435,
+   kuma 3306. TrueNAS's UI prefixes the project `ix-cluster-databases-*`.
 
-**Verify:**
-- `showmount -e 10.10.10.60` lists `/mnt/SSD/cluster`.
-- From a node that can reach it, the export mounts read/write and a test file
-  created from two different hosts is owned by `1000:1000`.
-- `nc -z 10.10.10.60 5432` (and 3306, 5433–5435) succeeds from the swarm subnet
-  only.
+**Port restriction to `10.10.10.21-23`: skipped.** SCALE's UI offers no
+supported firewall/ACL mechanism for custom-app port bindings, so the five
+ports answer from any LAN host. Decide at Phase 1.
+
+**Verify (2026-09-26, passed):**
+- `/etc/exports` lists `/mnt/SSD/local/cluster` as
+  `*(sec=sys,rw,anonuid=1000,anongid=1000,all_squash,no_subtree_check)`.
+  (`showmount -e` does not work against this box from macOS — RPC
+  program/version mismatch — so the exports file is the enumeration.)
+- A file created by root through a localhost NFSv4 mount on the NAS lands
+  owned `1000:1000` (mapall squashes even root). The two-host half of the test
+  (workstation and/or a swarm node) completes with Phase 1's mounts.
+- All five ports answer on `10.10.10.60` — from the LAN too, until the Phase 1
+  restriction decision.
 
 ### Phase 1 — Mount `/mnt/nas` on the old nodes
 
@@ -342,7 +361,7 @@ Per node (cl01, cl02, cl03), over ssh as the node user:
    Wants=network-online.target
 
    [Mount]
-   What=10.10.10.60:/mnt/SSD/cluster
+   What=10.10.10.60:/mnt/SSD/local/cluster
    Where=/mnt/nas
    Type=nfs
    Options=nfsvers=4.0,_netdev,rw,noatime,hard,rsize=1048576,wsize=1048576
@@ -568,7 +587,10 @@ moved in Phase 2); locksmithd reboot windows staggered (02:00/03:00/04:00).
   Swarm.
 - **NFS version** — pinned to 4.0 on both the Flatcar unit and the old-node
   unit (4.1/4.2 kernel regression).
-- **DB network exposure** — firewalled to the swarm subnet.
+- **DB network exposure** — the five database ports are currently open to the
+  whole LAN (TrueNAS's UI has no supported firewall mechanism for custom-app
+  port bindings); restricting them to the swarm subnet is a deferred Phase 1
+  decision.
 - **Resolver pinning is new on master and unproven on Flatcar.** The old OS
   pins host and container resolvers to the VIP via Ansible (landed 2026-09-26);
   the Ignition replacement (`10-cluster.network` + `daemon.json`) is written

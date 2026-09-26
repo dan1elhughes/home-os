@@ -4,6 +4,8 @@ The five database servers that used to run on the swarm, as one TrueNAS SCALE
 custom app (runbook Phase 0). Apps connect over TCP, so no database data
 directory lives on NFS.
 
+**Deployed on TrueNAS 2026-09-26 (runbook Phase 0 executed).**
+
 This directory sits outside `stacks/` on purpose. `stacks/deploy.sh` iterates
 every directory under `stacks/`, so a compose file here is never deployed to
 the swarm.
@@ -12,11 +14,11 @@ the swarm.
 
 | Container | Image | Data path on NAS | Host port |
 |---|---|---|---|
-| `homeassistant-postgres` | `postgres:18-alpine` | `/mnt/SSD/db/homeassistant` | 5432 |
-| `immich-postgres` | `ghcr.io/immich-app/postgres:18-vectorchord0.5.3` | `/mnt/SSD/db/immich` | 5433 |
-| `gitea-postgres` | `postgres:18.6` | `/mnt/SSD/db/gitea` | 5434 |
-| `mcpjungle-postgres` | `postgres:18.6` | `/mnt/SSD/db/mcpjungle` | 5435 |
-| `kuma-mariadb` | `mariadb:12.3` | `/mnt/SSD/db/kuma` | 3306 |
+| `homeassistant-postgres` | `postgres:18-alpine` | `/mnt/SSD/local/cluster-db/homeassistant` | 5432 |
+| `immich-postgres` | `ghcr.io/immich-app/postgres:18-vectorchord0.5.3` | `/mnt/SSD/local/cluster-db/immich` | 5433 |
+| `gitea-postgres` | `postgres:18.6` | `/mnt/SSD/local/cluster-db/gitea` | 5434 |
+| `mcpjungle-postgres` | `postgres:18.6` | `/mnt/SSD/local/cluster-db/mcpjungle` | 5435 |
+| `kuma-mariadb` | `mariadb:12.3` | `/mnt/SSD/local/cluster-db/kuma` | 3306 |
 
 ## Deviation from the runbook
 
@@ -28,15 +30,20 @@ correct. The `immich`, `gitea` and `mcpjungle` compose files in this repo use
 5433, 5434 and 5435. Confirm this scheme at Phase 0 or replace it with
 per-container IPs.
 
-## Deploy on TrueNAS
+## Deploy on TrueNAS (done 2026-09-26)
 
-1. Create `/mnt/SSD/db/{immich,homeassistant,gitea,kuma,mcpjungle}`.
-2. Give each dataset an owner the container runtime can write to. The official
-   Postgres and MariaDB images run as UID/GID 999; either chown the datasets to
-   999:999 or run the app under the same `PUID:PGID` used elsewhere.
-3. Create a custom app from this compose file (TrueNAS: Apps > Custom App, or
-   `docker compose up -d` over SSH).
-4. Restrict inbound 5432-5435 and 3306 to the swarm subnet (10.10.10.21-23).
+1. Datasets `/mnt/SSD/local/cluster-db/{immich,homeassistant,gitea,kuma,mcpjungle}`.
+   Grouped with the cluster dataset under `SSD/local` so the NAS backup regime
+   covers it (the runbook originally said `/mnt/SSD/db/*`). Parent dataset
+   stays root-owned; only the leaves are mounted.
+2. Owner `999:999` per leaf dataset. On this NAS that is user `netdata` +
+   group `docker` (UID 999 already belonged to netdata, GID 999 to the docker
+   group, and TrueNAS refuses duplicate IDs — the names are cosmetic).
+3. Custom app from this compose file (Apps > Custom App, Install via YAML).
+   TrueNAS's UI prefixes the project `ix-cluster-databases-*`.
+4. Port restriction to the swarm subnet (10.10.10.21-23): **skipped** — the
+   SCALE UI offers no supported firewall/ACL mechanism for custom-app port
+   bindings. The ports answer from any LAN host. Decide at Phase 1.
 
 ## Verify
 
@@ -49,3 +56,6 @@ nc -z 10.10.10.60 5432 && nc -z 10.10.10.60 5433 \
 Then dump each database from the old swarm and restore here before starting the
 migrated app (runbook Phase 2). Credentials are unchanged from the old compose
 files on purpose (runbook decision 10).
+
+As of Phase 0 the ports answer from any LAN host (restriction skipped — step 4
+above), so this check succeeds from the workstation too.

@@ -27,7 +27,7 @@ services:
     ports:
       - "10.10.10.60:5432:5432"
     volumes:
-      - /mnt/SSD/db/homeassistant:/var/lib/postgresql
+      - /mnt/SSD/local/cluster-db/homeassistant:/var/lib/postgresql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U homeassistant -d homeassistant"]
       interval: 10s
@@ -46,7 +46,7 @@ services:
     ports:
       - "10.10.10.60:5433:5432"
     volumes:
-      - /mnt/SSD/db/immich:/var/lib/postgresql
+      - /mnt/SSD/local/cluster-db/immich:/var/lib/postgresql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U immich -d immich"]
       interval: 10s
@@ -64,7 +64,7 @@ services:
     ports:
       - "10.10.10.60:5434:5432"
     volumes:
-      - /mnt/SSD/db/gitea:/var/lib/postgresql
+      - /mnt/SSD/local/cluster-db/gitea:/var/lib/postgresql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U gitea -d gitea"]
       interval: 10s
@@ -84,7 +84,7 @@ services:
     volumes:
       # Postgres 18+ stores the cluster in a versioned subdirectory, so the
       # mount must be the parent (/var/lib/postgresql), not .../data.
-      - /mnt/SSD/db/mcpjungle:/var/lib/postgresql
+      - /mnt/SSD/local/cluster-db/mcpjungle:/var/lib/postgresql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U mcpjungle -d mcpjungle"]
       interval: 10s
@@ -103,7 +103,7 @@ services:
     ports:
       - "10.10.10.60:3306:3306"
     volumes:
-      - /mnt/SSD/db/kuma:/var/lib/mysql
+      - /mnt/SSD/local/cluster-db/kuma:/var/lib/mysql
     healthcheck:
       test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
       interval: 10s
