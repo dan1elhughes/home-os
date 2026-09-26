@@ -509,11 +509,17 @@ with the VIP still on old nodes.
 monitors, HA history, Immich library, *arr configs); the service answers
 through Traefik; logs free of DB errors.
 
-### Phase 3 — Node swaps: cl03 (done) → cl02 → cl01
+### Phase 3 — Node swaps — COMPLETE: cl03 + cl02 + cl01 (2026-09-26)
 
-**cl03 was swapped on 2026-09-26** (commit `2765d7a`). The real hardware found
-four first-boot bugs the QEMU pre-flight could not see — all fixed in
-`common.bu.tmpl` since, so cl02/cl01 renders carry them automatically:
+**All three nodes were swapped on 2026-09-26** — cl03 (commit `2765d7a`), then
+cl02 and cl01 the same evening. The swarm was never rebuilt; every node
+re-joined with the baked token. Final VIP layout: cl01 is keepalived
+MASTER@100 (applied on the node + `nodes/cl01.env`, commit `b864fc7`);
+cl02/cl03 stay BACKUP@50 — equal priorities tiebreak by highest IP and never
+preempt, so the VIP has one deterministic home with automatic failback.
+
+The real hardware found four first-boot bugs the QEMU pre-flight could not see
+— all fixed in `common.bu.tmpl` before cl02/cl01 were swapped:
 
 1. **sudoers collision**: Ignition's users section writes `/etc/sudoers.d/core`
    itself; a file entry with the same path made every Ignition run CRITICAL-fail
@@ -543,7 +549,7 @@ partially-applied boot stays idempotent. cl03's OEM config was re-baked in place
 from the live node (`mount /dev/sda6` + copy the rendered config) — for cl02 and
 cl01 the fresh install bakes the current render anyway.
 
-Per node (cl03 is done; next is **cl02**, then **cl01**):
+Per node (all three done; kept for reference if a node ever needs a re-swap):
 
 1. Confirm the swarm is converged: `docker node ls`, `docker service ls` —
    all replicas healthy.
@@ -562,7 +568,7 @@ Per node (cl03 is done; next is **cl02**, then **cl01**):
    onto the two surviving nodes, which already read `/mnt/nas` — this is what
    makes the swap safe.
 4. Reformat in place with the **Delivery flow above** (Ubuntu live +
-   `flatcar-install -f … -i …`, then reboot). cl02's disk is `/dev/sda` —
+   `flatcar-install -f … -i …`, then reboot). Each node's SSD was `/dev/sda` —
    confirm with `lsblk` in the live session anyway.
 5. The node rejoins the **same** swarm via the baked token and comes up as a
    new manager with `/mnt/nas` mounted and docker gated on it. `ssh-keygen -R`
@@ -583,21 +589,17 @@ Per node (cl03 is done; next is **cl02**, then **cl01**):
    server-side.
 8. Verify the node: `findmnt /mnt/nas` (nfs4, vers=4.0, hard),
    `systemctl show docker -p Requires` includes `mnt-nas.mount`, `docker node
-   ls` shows it `Ready`/`Reachable`, keepalived `active` + `BACKUP` with the
-   VIP still held by an old node (`ip -br addr | grep 10.10.10.20` from the
-   VIP), `resolvectl dns enp1s0` = `10.10.10.20` only, a container resolves
-   `home.danhughes.dev`, services healthy on it, and a file written on the new
-   node's `/mnt/nas` appears on another node owned `1000:1000` (delete it
-   after).
+   ls` shows it `Ready`/`Reachable`, keepalived `active` with a stable MainPID
+   and the state its env file specifies (during the swaps every node was
+   `BACKUP@50`; cl01 is now `MASTER@100`), `resolvectl dns enp1s0` =
+   `10.10.10.20` only, a container resolves `home.danhughes.dev`, services
+   healthy on it, and a file written on the new node's `/mnt/nas` appears on
+   another node owned `1000:1000` (delete it after).
 
-cl03 is done. When **cl01** — the last old node — is reformatted, the VIP moves
-to a Flatcar node and `10.10.10.20` resolves to it; DNS is unchanged. After
-cl01's swap, restore `KEEPALIVED_STATE=MASTER` / `KEEPALIVED_PRIORITY=100` in
-`nodes/cl01.env` and re-render (see section 2).
-
-**Verify (whole phase):** three managers `Ready`/`Reachable`; VIP on Flatcar;
-every service healthy after rebalance; certificates still valid (`acme.json`
-moved in Phase 2); locksmithd reboot windows staggered (02:00/03:00/04:00).
+**Verify (whole phase):** three managers `Ready`/`Reachable`; VIP on Flatcar
+(cl01 MASTER@100 — done, commit `b864fc7`); every service healthy;
+certificates still valid (`acme.json` moved in Phase 2); locksmithd reboot
+windows staggered (02:00/03:00/04:00).
 
 ### Phase 4 — Post-migration checks
 
@@ -606,10 +608,9 @@ moved in Phase 2); locksmithd reboot windows staggered (02:00/03:00/04:00).
    (the reformats removed MicroCeph with the old OS).
 3. Configs editable from the workstation over NFS (`/mnt/nas` with `mapall`).
 4. A node reboot in its locksmithd window rejoins cleanly (try one if you can).
-5. Restore cl01's keepalived end state — `state MASTER`, `priority 100` in
-   `/etc/keepalived/keepalived.conf` (or re-render) — so the VIP lands on cl01
-   rather than on whichever node wins the equal-priority election between the
-   three backups.
+5. ~~Restore cl01's keepalived end state~~ — **done 2026-09-26**: cl01 is
+   `state MASTER`, `priority 100` on the node and in `nodes/cl01.env`
+   (commit `b864fc7`); the VIP preempts back to cl01 automatically.
 6. Remove the old Ansible-era remnants from the docs if any reference survived.
 
 ## 5. Risks and accepted trade-offs
