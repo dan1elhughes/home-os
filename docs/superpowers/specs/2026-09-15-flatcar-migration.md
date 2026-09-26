@@ -278,10 +278,11 @@ both confirmed on cl03:
 
 netboot.xyz itself (TrueNAS `10.10.10.60:31010`, UniFi hands out
 `netboot.xyz.efi`, Secure Boot off, UEFI boot) still works fine — use it to boot
-the **Ubuntu live** image: `OS Installations → Ubuntu → Ubuntu Live → **Lxqt**`
-(lightest flavour = fastest boot; any flavour works). The live session runs
-entirely from RAM with the target disk unmounted, which is exactly what
-`flatcar-install` wants, and it has a full userland (bash, wget, bzip2, blkid).
+**hrmpf (Void Linux rescue)**, which starts sshd automatically at boot
+(`root:voidlinux`), so the whole install is driven over ssh and nothing needs
+typing at the KVM console. Fallback: **Ubuntu Live → Lxqt** (lightest flavour)
+if hrmpf misbehaves. The live session runs entirely from RAM with the target
+disk unmounted, which is exactly what `flatcar-install` wants.
 
 **Workstation prep (once per swap day):**
 
@@ -302,14 +303,18 @@ entirely from RAM with the target disk unmounted, which is exactly what
   sha512 against the matching `.DIGESTS` file. (The `.sha512` side-files 404;
   the `.DIGESTS` ones are real.)
 
-**Per node (at the KVM):**
+**Per node (hrmpf: ssh in as `root`, password `voidlinux`):**
 
 1. Boot menu → `UEFI: PXE IPv4` (or `HTTP IPv4` — both land on netboot.xyz).
-2. netboot.xyz → Ubuntu Live → **Lxqt** → boot to the desktop.
-3. Open a terminal (auto-logged-in as `ubuntu`), then paste:
+2. netboot.xyz → **hrmpf (Void Linux rescue)** → boot; sshd comes up on DHCP.
+3. From the workstation, over ssh as root (no console typing at all):
 
    ```sh
-   sudo -i
+   # first: satisfy flatcar-install's toolset check
+   for c in blockdev btrfstune cp cut dd awk gpg grep head ls lsblk lvm \
+            mkdir mkfifo mktemp mount rm sed sort tee udevadm wget wipefs; do
+     command -v $c >/dev/null || echo "MISSING: $c"
+   done   # install gaps with: xbps-install -Sy <pkg>
    wget -O /tmp/fi http://<IP>:8000/flatcar-install && chmod +x /tmp/fi && \
    wget -O /tmp/<node>.ign http://<IP>:8000/<node>.ign && \
    wget -O /tmp/img.bin.bz2 http://<IP>:8000/flatcar_production_image.bin.bz2 && \
@@ -318,8 +323,8 @@ entirely from RAM with the target disk unmounted, which is exactly what
 
    `-f` streams the local image (no upstream download on the node); `-i` embeds
    the Ignition config in the OEM partition so it applies on the first disk
-   boot. On `command 'bzip2' not found`: `apt-get install -y bzip2` and rerun.
-   On cl03 the whole thing took ~10 minutes including the 584 MB LAN transfer.
+   boot. On cl03 the whole thing took ~10 minutes including the 584 MB LAN
+   transfer (via the Lxqt fallback path; hrmpf should be faster — no GUI).
 4. On `INSTALL_DONE`: `reboot`. The disk now boots Flatcar directly; the RAM
    boot never happens.
 
