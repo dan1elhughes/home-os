@@ -1,0 +1,17 @@
+# NOT used by the migration: all nodes join the live swarm (decision 13 —
+# a swarm init on cl01 would fork a second cluster). This unit only bootstraps
+# a genuine from-scratch rebuild; render a node with
+# SWARM_UNIT_FILE=swarm-init.service to use it.
+[Unit]
+Description=Initialise single-node Docker Swarm
+After=docker.service network-online.target
+Requires=docker.service
+ConditionPathExists=!/var/lib/docker/swarm/state.json
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/bin/docker swarm init --advertise-addr ${NODE_IP}
+
+[Install]
+WantedBy=multi-user.target

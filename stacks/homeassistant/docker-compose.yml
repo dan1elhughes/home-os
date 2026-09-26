@@ -2,7 +2,7 @@ services:
   tasmoadmin:
     image: ghcr.io/tasmoadmin/tasmoadmin:v5.0.0
     volumes:
-      - "/mnt/cephfs/tasmoadmin-config:/data"
+      - "/mnt/nas/tasmoadmin-config:/data"
     deploy:
       labels:
         - "traefik.enable=true"
@@ -20,7 +20,7 @@ services:
     ports:
       - 1883:1883
     volumes:
-      - /mnt/cephfs/mosquitto:/mosquitto
+      - /mnt/nas/mosquitto:/mosquitto
     environment:
       - MQTT_PASSWORD=${MQTT_PASSWORD}
     healthcheck:
@@ -34,25 +34,10 @@ services:
       retries: 3
       start_period: 10s
 
-  postgres:
-    image: postgres:18-alpine
-    environment:
-      - POSTGRES_USER=homeassistant
-      - POSTGRES_PASSWORD=POSTGRES
-      - POSTGRES_DB=homeassistant
-    volumes:
-      - /mnt/cephfs/homeassistant-postgres:/var/lib/postgresql
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U homeassistant -d homeassistant"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 30s
-
   trmnl-ha:
     image: ghcr.io/usetrmnl/trmnl-ha-amd64:0.10.3
     volumes:
-      - /mnt/cephfs/trmnl:/data
+      - /mnt/nas/trmnl:/data
     environment:
       - HOME_ASSISTANT_URL=http://homeassistant:8123
       - ACCESS_TOKEN=${TRMNL_ACCESS_TOKEN?error}
@@ -109,10 +94,9 @@ services:
         done
         exec /init
     volumes:
-      - /mnt/cephfs/homeassistant:/config
+      - /mnt/nas/homeassistant:/config
     depends_on:
       - mosquitto
-      - postgres
     deploy:
       labels:
         - "traefik.enable=true"
@@ -153,7 +137,7 @@ services:
         cp /run/predbat/apps.yaml /config/apps.yaml
         exec /init
     volumes:
-      - /mnt/cephfs/predbat:/config
+      - /mnt/nas/predbat:/config
       - /etc/localtime:/etc/localtime:ro
     configs:
       - source: predbat_apps

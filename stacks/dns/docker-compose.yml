@@ -4,7 +4,7 @@ services:
     entrypoint: ["/bin/sh", "/run/dns/entrypoint.sh"]
     networks: [default]
     volumes:
-      - /mnt/cephfs/dns:/opt/unbound/etc/unbound/generated:ro
+      - /mnt/nas/dns:/opt/unbound/etc/unbound/generated:ro
       - dns_trust_anchor:/opt/unbound/etc/unbound/var
     configs:
       - source: unbound
@@ -75,7 +75,7 @@ services:
       RECORDS_PATH: /data/hosts.conf
       TRAEFIK_IP: 10.10.10.20
     volumes:
-      - /mnt/cephfs/dns:/data
+      - /mnt/nas/dns:/data
     configs:
       - source: generator
         target: /run/dns/generator.py

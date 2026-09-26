@@ -1,0 +1,184 @@
+# Common Flatcar Butane config. render.sh substitutes ${...} per node and
+# transpiles it to Ignition. Never deploy the files under out/ directly.
+#
+# Secrets (KEEPALIVED_PASSWORD, SWARM_JOIN_TOKEN) are injected at render time
+# from the environment and never committed.
+#
+# This replaces the old Ansible roles: common (SSH hardening, sudo, reboot),
+# docker (docker prune), swarm (init/join, cephfs mount dependency) and
+# keepalived.
+variant: flatcar
+version: 1.1.0
+
+passwd:
+  users:
+    # Flatcar's core user already has passwordless sudo; the drop-in below
+    # makes that explicit. Docker group gives docker access without sudo.
+    - name: core
+      groups:
+        - docker
+      ssh_authorized_keys_local:
+        - authorized_keys
+
+storage:
+  files:
+    # Flatcar defaults the hostname to "localhost". Set it explicitly, or every
+    # swarm node ends up with the same name.
+    - path: /etc/hostname
+      overwrite: true
+      mode: 0644
+      contents:
+        inline: ${NODE_NAME}
+
+    - path: /etc/sudoers.d/core
+      mode: 0440
+      contents:
+        inline: |
+          core ALL=(ALL) NOPASSWD: ALL
+
+    - path: /etc/ssh/sshd_config.d/10-hardening.conf
+      mode: 0644
+      contents:
+        inline: |
+          PasswordAuthentication no
+          PermitRootLogin no
+
+    # Container resolver: dockerd snapshots its upstreams from the host
+    # resolver at start and never re-reads /etc/resolv.conf into running
+    # containers, so the networkd pin below does not reach them. Pin the VIP
+    # explicitly — the same daemon.json the old Ansible docker role wrote.
+    - path: /etc/docker/daemon.json
+      overwrite: true
+      mode: 0644
+      contents:
+        inline: |
+          {
+            "dns": ["10.10.10.20"]
+          }
+
+    # Flatcar update/reboot strategy. reboot means locksmithd reboots as soon
+    # as an update is ready, but only inside the window below. The window is
+    # staggered per node (see nodes/*.env) so the three managers never reboot in
+    # the same hour and the swarm keeps quorum. This is the only reboot
+    # mechanism: a node with no staged update stays up.
+    - path: /etc/flatcar/update.conf
+      overwrite: true
+      mode: 0420
+      contents:
+        inline: |
+          REBOOT_STRATEGY=reboot
+          LOCKSMITHD_REBOOT_WINDOW_START="${REBOOT_WINDOW_START}"
+          LOCKSMITHD_REBOOT_WINDOW_LENGTH=1h
+
+    - path: /etc/keepalived/keepalived.conf
+      mode: 0644
+      contents:
+        local: keepalived.conf
+
+    # Host resolver: pin the dns-stack VIP. Flatcar resolves through
+    # systemd-resolved, which takes its servers from networkd; DHCP would
+    # otherwise add the router's resolver, which cannot resolve
+    # *.danhughes.dev. This is the Flatcar replacement for the old Ansible
+    # netplan pin (99-dns.yaml with dhcp4-overrides.use-dns: false). The VIP
+    # is the keepalived VIP below; both must move together if it ever changes.
+    # networkd honours the first lexically-matching unit and ignores later
+    # matches, so a full .network unit named 10- wins over the platform's
+    # shipped files for this NIC — which is why it must carry the DHCP config
+    # itself. Ignition writes it before networkd starts, so no reload is
+    # needed. The QEMU pre-flight confirms the lease and the resolver
+    # (networkctl status, resolvectl dns).
+    - path: /etc/systemd/network/10-cluster.network
+      mode: 0644
+      contents:
+        inline: |
+          [Match]
+          Name=${KEEPALIVED_INTERFACE}
+
+          [Network]
+          DHCP=yes
+          DNS=10.10.10.20
+
+          [DHCPv4]
+          UseDNS=false
+
+systemd:
+  units:
+    # --- TrueNAS config export ---------------------------------------------
+    - name: mnt-nas.mount
+      enabled: true
+      contents: |
+        [Unit]
+        Description=TrueNAS config export at /mnt/nas
+        After=network-online.target
+        Wants=network-online.target
+
+        [Mount]
+        What=${NAS_SERVER}:${NAS_EXPORT}
+        Where=/mnt/nas
+        Type=nfs
+        Options=nfsvers=4.0,_netdev,rw,noatime,hard,rsize=1048576,wsize=1048576
+
+        [Install]
+        WantedBy=multi-user.target
+
+    - name: rpc-statd.service
+      enabled: true
+
+    # Docker must not start until the config export is mounted. Replaces the
+    # old /usr/lib/systemd/system/docker.service.d/after-mount.conf.
+    - name: docker.service
+      dropins:
+        - name: 10-nas.conf
+          contents: |
+            [Unit]
+            Requires=mnt-nas.mount
+            After=mnt-nas.mount
+
+    # --- Weekly Docker prune ------------------------------------------------
+    - name: docker-prune.service
+      contents: |
+        [Unit]
+        Description=Docker system prune with volumes
+
+        [Service]
+        Type=oneshot
+        ExecStart=/usr/bin/docker system prune --volumes -f
+
+    - name: docker-prune.timer
+      enabled: true
+      contents: |
+        [Unit]
+        Description=Run Docker prune weekly
+
+        [Timer]
+        OnCalendar=Sun *-*-* 03:00:00
+        RandomizedDelaySec=1h
+        Persistent=true
+
+        [Install]
+        WantedBy=timers.target
+
+    # --- Swarm membership ---------------------------------------------------
+    # One unit name, two bodies: render.sh picks swarm-init.service for cl01
+    # and swarm-join.service for the followers via ${SWARM_UNIT_FILE}.
+    - name: swarm.service
+      enabled: true
+      contents_local: ${SWARM_UNIT_FILE}
+
+    # --- keepalived ---------------------------------------------------------
+    # Included but disabled: the binary comes from a community Flatcar sysext
+    # that is not wired up yet. Enable out of band at Phase 3.
+    - name: keepalived.service
+      enabled: false
+      contents: |
+        [Unit]
+        Description=Keepalived
+        After=network-online.target
+        Wants=network-online.target
+
+        [Service]
+        ExecStart=/usr/bin/keepalived --dont-fork --log-console
+        Restart=on-failure
+
+        [Install]
+        WantedBy=multi-user.target

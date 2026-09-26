@@ -4,7 +4,10 @@ services:
     image: ghcr.io/mcpjungle/mcpjungle:0.4.6-stdio
     environment:
       - TZ=${TZ?error}
-      - DATABASE_URL=postgres://mcpjungle:mcpjungle@mcpjungle-db:5432/mcpjungle
+      # TrueNAS database app (see truenas-databases/). Port 5435 is this
+      # stack's own Postgres instance; every Postgres on the NAS host IP
+      # needs a distinct port.
+      - DATABASE_URL=postgres://mcpjungle:mcpjungle@10.10.10.60:5435/mcpjungle
       # Enterprise mode enables auth/ACLs. Set up the admin user and MCP
       # clients with `mcpjungle init-server` / `create mcp-client` (see
       # README). Without a client token the gateway refuses connections.
@@ -16,15 +19,13 @@ services:
     volumes:
       # Read-write host dir for the `filesystem` stdio MCP server, mounted as
       # /host inside the container. Deliberately a single directory, not the
-      # whole cephfs share — the filesystem server can write anywhere in /host.
-      - "/mnt/cephfs/mcpjungle-host:/host:rw"
-      # Admin CLI conf (registry URL + admin access token) persisted on cephfs
-      # so `docker exec /mcpjungle ...` keeps working across container
+      # whole NAS share — the filesystem server can write anywhere in /host.
+      - "/mnt/nas/mcpjungle-host:/host:rw"
+      # Admin CLI conf (registry URL + admin access token) persisted on the
+      # NAS so `docker exec /mcpjungle ...` keeps working across container
       # recreates. The file must exist on the host before the container starts
-      # (swarm bind-mount requirement); see /mnt/cephfs/mcpjungle-conf/.
-      - "/mnt/cephfs/mcpjungle-conf/.mcpjungle.conf:/root/.mcpjungle.conf:rw"
-    depends_on:
-      - mcpjungle-db
+      # (swarm bind-mount requirement); see /mnt/nas/mcpjungle-conf/.
+      - "/mnt/nas/mcpjungle-conf/.mcpjungle.conf:/root/.mcpjungle.conf:rw"
     deploy:
       labels:
         - "traefik.enable=true"
@@ -36,23 +37,6 @@ services:
         - "traefik.swarm.network=main"
         - "kuma.mcpjungle.http.name=MCPJungle"
         - "kuma.mcpjungle.http.url=http://mcpjungle:8080/health"
-
-  mcpjungle-db:
-    image: postgres:18
-    environment:
-      - POSTGRES_USER=mcpjungle
-      - POSTGRES_PASSWORD=mcpjungle
-      - POSTGRES_DB=mcpjungle
-      - TZ=${TZ?error}
-    volumes:
-      # Postgres 18+ stores the cluster in a versioned subdirectory, so the
-      # mount must be the parent (/var/lib/postgresql), not .../data.
-      - "/mnt/cephfs/mcpjungle-db:/var/lib/postgresql"
-    healthcheck:
-      test: ["CMD-SHELL", "PGPASSWORD=mcpjungle pg_isready -U mcpjungle"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
 
 networks:
   default:
