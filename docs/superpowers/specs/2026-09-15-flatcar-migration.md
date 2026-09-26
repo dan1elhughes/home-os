@@ -278,11 +278,12 @@ both confirmed on cl03:
 
 netboot.xyz itself (TrueNAS `10.10.10.60:31010`, UniFi hands out
 `netboot.xyz.efi`, Secure Boot off, UEFI boot) still works fine — use it to boot
-**hrmpf (Void Linux rescue)**, which starts sshd automatically at boot
-(`root:voidlinux`), so the whole install is driven over ssh and nothing needs
-typing at the KVM console. Fallback: **Ubuntu Live → Lxqt** (lightest flavour)
-if hrmpf misbehaves. The live session runs entirely from RAM with the target
-disk unmounted, which is exactly what `flatcar-install` wants.
+the **Ubuntu live** image: `OS Installations → Ubuntu → Ubuntu Live → **Lxqt**`
+(lightest flavour = fastest boot). The live session runs entirely from RAM with
+the target disk unmounted, which is exactly what `flatcar-install` wants. Do
+NOT bother with the netboot.xyz **hrmpf** entry: its live squashfs downloads
+from github.com and dracut gives up (`/dev/root does not exist` → debug shell,
+no sshd) — tried on cl02, dead on arrival.
 
 **Workstation prep (once per swap day):**
 
@@ -303,36 +304,38 @@ disk unmounted, which is exactly what `flatcar-install` wants.
   sha512 against the matching `.DIGESTS` file. (The `.sha512` side-files 404;
   the `.DIGESTS` ones are real.)
 
-**Per node (hrmpf: ssh in as `root`, password `voidlinux`):**
+**Per node (Ubuntu live; everything runs in the live session's terminal, which
+opens as root):**
 
 1. Boot menu → `UEFI: PXE IPv4` (or `HTTP IPv4` — both land on netboot.xyz).
-2. netboot.xyz → **hrmpf (Void Linux rescue)** → boot; sshd comes up on DHCP.
-3. From the workstation, over ssh as root (no console typing at all):
+2. netboot.xyz → `OS Installations` → `Ubuntu` → `Ubuntu Live` → `Lxqt`; the
+   live session ships **no ssh server**, so don't plan on driving it remotely —
+   check the node's DHCP address with `ip a` (expect `.2x`) and work at the
+   console.
+3. In the live terminal, confirm the target disk (`lsblk -d -o NAME,SIZE,MODEL`)
+   then paste the install as **one line** (the GLKVM mangles `|`, `"` and `$`;
+   see the paste gotcha below — this line is clean by construction):
 
    ```sh
-   # first: satisfy flatcar-install's toolset check
-   for c in blockdev btrfstune cp cut dd awk gpg grep head ls lsblk lvm \
-            mkdir mkfifo mktemp mount rm sed sort tee udevadm wget wipefs; do
-     command -v $c >/dev/null || echo "MISSING: $c"
-   done   # install gaps with: xbps-install -Sy <pkg>
-   wget -O /tmp/fi http://<IP>:8000/flatcar-install && chmod +x /tmp/fi && \
-   wget -O /tmp/<node>.ign http://<IP>:8000/<node>.ign && \
-   wget -O /tmp/img.bin.bz2 http://<IP>:8000/flatcar_production_image.bin.bz2 && \
-   /tmp/fi -d /dev/sda -f /tmp/img.bin.bz2 -i /tmp/<node>.ign && echo INSTALL_DONE
+   wget -O /tmp/fi http://<IP>:8000/flatcar-install && chmod +x /tmp/fi && wget -O /tmp/<node>.ign http://<IP>:8000/<node>.ign && wget -O /tmp/img.bin.bz2 http://<IP>:8000/flatcar_production_image.bin.bz2 && /tmp/fi -d /dev/sda -f /tmp/img.bin.bz2 -i /tmp/<node>.ign && echo INSTALL_DONE
    ```
+
+   (If the toolset check ever matters — it hasn't on Lubuntu 22.04 — run the
+   `command -v` loop from cl03's history; gaps go via
+   `apt-get update && apt-get install -y <pkg>`.)
 
    `-f` streams the local image (no upstream download on the node); `-i` embeds
    the Ignition config in the OEM partition so it applies on the first disk
-   boot. On cl03 the whole thing took ~10 minutes including the 584 MB LAN
-   transfer (via the Lxqt fallback path; hrmpf should be faster — no GUI).
+   boot. Both cl03 and cl02 took ~5 minutes: the 584 MB image lands at
+   ~110 MB/s over LAN, then the 8.4 GB write to the SSD.
 4. On `INSTALL_DONE`: `reboot`. The disk now boots Flatcar directly; the RAM
    boot never happens.
 
 **KVM/console paste gotcha:** the GLKVM console mangles pasted special
 characters (`|` arrives as `>`, `"` as `@` — UK-layout injection) and breaks
 multi-line pastes. Anything typed at a console must be a **single line with no
-`|`, `"` or `$`** where avoidable. Everything that can be, should run over ssh
-instead.
+`|`, `"` or `$`** where avoidable. Once Flatcar is booted, everything moves over
+ssh (`core@`) and the console stops mattering.
 
 **First login:** the host key changed with the reformat —
 `ssh-keygen -R <node-ip>` before the first `ssh core@<node-ip>`.
