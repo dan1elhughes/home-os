@@ -260,57 +260,77 @@ The sequence is **storage first, then one node at a time**: TrueNAS prep,
 mount `/mnt/nas` everywhere, cut every stack over in place, then reformat
 cl01 → cl02 → cl03 with the swarm never rebuilt.
 
-### Delivery (netboot.xyz)
+### Delivery (Ubuntu live + flatcar-install — the proven path)
 
-Used in Phase 3, per node. Boot each node from the netboot.xyz Flatcar menu
-entry. It prompts for the Ignition URL and then boots the PXE kernel with
-`ignition.config.url=<url> flatcar.first_boot=1` (plus
-`flatcar.autologin=tty1/ttyS0`). `flatcar.first_boot=1` is what makes Ignition
-run; the menu's `ignition_config` entry sets it.
+Used in Phase 3, per node. **Executed on cl03 (2026-09-26); follow this verbatim
+for cl02 and cl01.**
 
-netboot.xyz itself runs on TrueNAS at `10.10.10.60:31010`, and the custom
-Flatcar menu lives there. The `netboot` stack in this repo is only a Caddy proxy
-that exposes it at `netboot.danhughes.dev` through Traefik on the swarm. Do not
-use that hostname for PXE: firmware has no internal DNS. Read the boot chain
-from `10.10.10.60:31010` directly.
+Do NOT use the netboot.xyz **Flatcar menu entries**. Two independent failures,
+both confirmed on cl03:
 
-**Node prerequisites.** The node must boot UEFI, because UniFi hands out
-`netboot.xyz.efi`. Secure Boot must be **off** (that binary is unsigned), and
-the NIC needs a driver bundled in iPXE. A legacy-BIOS node would need
-`netboot.xyz-undionly.kpxe` as the UniFi bootfile instead.
+- Flatcar's release server 308-redirects `http://stable.release.flatcar-linux.net`
+  to https, and netboot.xyz's iPXE cannot follow TLS: every kernel/initrd fetch
+  dies with `Operation not permitted (0x410de18f)`. Serving the assets locally
+  from the workstation fixes the fetch but not what follows: the RAM boot hung
+  and rebooted on its own (see Phase 3 notes — the sudoers collision, since
+  fixed, compounded it). The PXE/RAM route is simply not worth debugging when
+  the live-install route below takes ten minutes.
 
-Serve the rendered configs from the workstation with `ignition/serve.sh`, run in
-its own terminal (it is a foreground server and blocks until Ctrl-C). It serves
-`ignition/out/` and prints the URL to paste at the prompt (for example
-`http://10.10.10.142:8000/cl01.ign`). Keep it running for the whole install; the
-booting node fetches its config from it. It listens on all interfaces, which is
-fine on the trusted LAN, but the files carry the VRRP password and the manager
-join token, so do not leave it running on an untrusted network.
+netboot.xyz itself (TrueNAS `10.10.10.60:31010`, UniFi hands out
+`netboot.xyz.efi`, Secure Boot off, UEFI boot) still works fine — use it to boot
+the **Ubuntu live** image: `OS Installations → Ubuntu → Ubuntu Live → **Lxqt**`
+(lightest flavour = fastest boot; any flavour works). The live session runs
+entirely from RAM with the target disk unmounted, which is exactly what
+`flatcar-install` wants, and it has a full userland (bash, wget, bzip2, blkid).
 
-**Per node:**
+**Workstation prep (once per swap day):**
 
-1. At the Flatcar menu choose **`ignition_config`** and paste
-   `http://10.10.10.142:8000/<node>.ign`. That entry is what sets
-   `flatcar.first_boot=1`; choosing a channel directly does not, and Ignition
-   will not run.
-2. Choose **stable** (or beta/alpha). Do **not** choose **edge** — Flatcar has no
-   edge channel, so it fails. Either use stable, or add an `lts` entry to
-   `flatcar.ipxe` on the NAS.
-3. The node boots in RAM and auto-logs-in as `core`. **A PXE boot does not
-   install to disk**, so install and reboot:
+- The workstation IP is DHCP — check it, never trust a stale note:
+  `ipconfig getifaddr en0` (was `.142`, then `.140`; the examples below use
+  `<IP>`). 
+- `cd ignition && ./serve.sh` in its own terminal; it serves `ignition/out/`
+  on :8000 for the whole day. The files carry the VRRP password and the join
+  token — trusted LAN only.
+- Render the node's config (see Phase 3 step 2) so `out/<node>.ign` exists.
+- `ignition/out/flatcar-install` must be the **patched copy**: the live image
+  has no gawk, and upstream demands it. Two edits: the `toolset=( … )` line
+  `gawk` → `awk`, and `gawk --field-separator '='` → `awk -F=`. The served
+  copy is already patched; if `out/` is ever regenerated from upstream,
+  re-apply.
+- `ignition/out/flatcar_production_image.bin.bz2` — download from
+  `https://stable.release.flatcar-linux.net/amd64-usr/current/` and verify
+  sha512 against the matching `.DIGESTS` file. (The `.sha512` side-files 404;
+  the `.DIGESTS` ones are real.)
+
+**Per node (at the KVM):**
+
+1. Boot menu → `UEFI: PXE IPv4` (or `HTTP IPv4` — both land on netboot.xyz).
+2. netboot.xyz → Ubuntu Live → **Lxqt** → boot to the desktop.
+3. Open a terminal (auto-logged-in as `ubuntu`), then paste:
 
    ```sh
-   curl -o /tmp/<node>.ign http://10.10.10.142:8000/<node>.ign
-   sudo flatcar-install -d /dev/<disk> -i /tmp/<node>.ign
-   sudo reboot
+   sudo -i
+   wget -O /tmp/fi http://<IP>:8000/flatcar-install && chmod +x /tmp/fi && \
+   wget -O /tmp/<node>.ign http://<IP>:8000/<node>.ign && \
+   wget -O /tmp/img.bin.bz2 http://<IP>:8000/flatcar_production_image.bin.bz2 && \
+   /tmp/fi -d /dev/sda -f /tmp/img.bin.bz2 -i /tmp/<node>.ign && echo INSTALL_DONE
    ```
 
-   `flatcar-install` is in the PXE image and installs the same channel and
-   version that was PXE-booted by default.
+   `-f` streams the local image (no upstream download on the node); `-i` embeds
+   the Ignition config in the OEM partition so it applies on the first disk
+   boot. On `command 'bzip2' not found`: `apt-get install -y bzip2` and rerun.
+   On cl03 the whole thing took ~10 minutes including the 584 MB LAN transfer.
+4. On `INSTALL_DONE`: `reboot`. The disk now boots Flatcar directly; the RAM
+   boot never happens.
 
-4. The node's real Ignition applies on the first **disk** boot. Skipping step 3
-   leaves the node diskless: docker and the swarm start in RAM and reset on every
-   reboot.
+**KVM/console paste gotcha:** the GLKVM console mangles pasted special
+characters (`|` arrives as `>`, `"` as `@` — UK-layout injection) and breaks
+multi-line pastes. Anything typed at a console must be a **single line with no
+`|`, `"` or `$`** where avoidable. Everything that can be, should run over ssh
+instead.
+
+**First login:** the host key changed with the reformat —
+`ssh-keygen -R <node-ip>` before the first `ssh core@<node-ip>`.
 
 ### Phase 0 — TrueNAS prep (executed 2026-09-26)
 
@@ -481,26 +501,41 @@ with the VIP still on old nodes.
 monitors, HA history, Immich library, *arr configs); the service answers
 through Traefik; logs free of DB errors.
 
-### Phase 3 — Node swaps: cl01 → cl02 → cl03
+### Phase 3 — Node swaps: cl03 (done) → cl02 → cl01
 
-Before the first swap: add the **sysext-bakery keepalived extension** to the
-Ignition configs — fetch the pinned `keepalived-v2.3.1-x86-64.raw` into
-`/opt/extensions/keepalived/`, symlink it into `/etc/extensions/keepalived.raw`,
-no `systemd-sysupdate` timer — and change `keepalived.service` from
-`enabled: false` to `enabled: true` with the VRRP parameters from section 2
-(`state BACKUP`, priority 50 on Flatcar nodes for now). Re-render and re-run
-the QEMU pre-flight for that change: the unit must start as `BACKUP` without
-stealing the VIP. This is the least-proven piece of Phase 3; if the sysext will
-not come up, stop and resolve it before any swap (the fallback is leaving the
-last old node idle as VIP holder).
+**cl03 was swapped on 2026-09-26** (commit `2765d7a`). The real hardware found
+four first-boot bugs the QEMU pre-flight could not see — all fixed in
+`common.bu.tmpl` since, so cl02/cl01 renders carry them automatically:
 
-The resolver pinning is already in `common.bu.tmpl` (section 2) — the same
-re-render and QEMU pre-flight pass covers it: the node must lease an address
-via `10-cluster.network` and name only the VIP as resolver. Skip the pin and a
-swapped node silently falls back to router DNS that cannot resolve
-`*.danhughes.dev`, and its containers lose every internal name with it.
+1. **sudoers collision**: Ignition's users section writes `/etc/sudoers.d/core`
+   itself; a file entry with the same path made every Ignition run CRITICAL-fail
+   (`A file exists there already and overwrite is false`). This also caused the
+   RAM-boot emergency/reboot loop. Our sudoers drop-in is now `/etc/sudoers.d/10-core`.
+2. **`/usr` is a read-only verified partition** — Ignition cannot create files
+   there (the keepalived sysext exists precisely for this). Anything executable
+   must ship under `/etc`.
+3. **Mount race**: `mnt-nas.mount` failed with `mount.nfs: Network is
+   unreachable` at boot+0s — `network-online.target` was reached before any DHCP
+   lease because `systemd-networkd-wait-online` is disabled by default. Now
+   enabled in the template. On the swapped node: `systemctl is-enabled
+   systemd-networkd-wait-online` must say `enabled`.
+4. **keepalived restart loop**: the sysext ships
+   `/usr/lib/systemd/system/keepalived.service.d/10-keepalived.conf`, which
+   replaces `ExecStart` with a daemonizing command; under our `Type=simple` unit
+   the parent exits and the service SIGTERM-loops every ~6 s. The template now
+   ships `/etc/systemd/system/keepalived.service.d/zz-override.conf` that
+   re-asserts `--dont-fork --log-console`. After boot, `systemctl is-active
+   keepalived` must be `active` with a stable MainPID and `BACKUP STATE` in the
+   journal.
+5. `/etc/timezone` + `/etc/localtime` (`Etc/UTC`) are now shipped: gitea and
+   homeassistant ro-bind them and Flatcar ships neither.
 
-Per node:
+Also: all `/etc` files are `overwrite: true` now, so a re-run over a
+partially-applied boot stays idempotent. cl03's OEM config was re-baked in place
+from the live node (`mount /dev/sda6` + copy the rendered config) — for cl02 and
+cl01 the fresh install bakes the current render anyway.
+
+Per node (cl03 is done; next is **cl02**, then **cl01**):
 
 1. Confirm the swarm is converged: `docker node ls`, `docker service ls` —
    all replicas healthy.
@@ -508,15 +543,24 @@ Per node:
    token (`docker swarm join-token manager -q`) — one token serves all three
    swaps because the swarm is never re-initialised. The join target
    (`MANAGER_IP` in `nodes/*.env`) must be a manager that is **alive during
-   that node's swap** — never the node being reformatted (cl01 joins via
-   cl02, cl02/cl03 via the Flatcar cl01).
+   that node's swap** — never the node being reformatted. Stage secrets to
+   temp files without echoing them: the keepalived password from the node's own
+   old OS (`ssh dan@<node-ip> 'sudo grep auth_pass /etc/keepalived/keepalived.conf'
+   | awk '{print $2}'`), the token from the manager VIP; then
+   `KEEPALIVED_PASSWORD=$(cat …) SWARM_JOIN_TOKEN=$(cat …) DOCKER_CONTEXT=desktop-linux ./render.sh <node>`.
+   Render with the local docker daemon (`DOCKER_CONTEXT=desktop-linux`) — only
+   swarm commands use `DOCKER_CONTEXT=swarm`.
 3. Drain: `docker node update --availability drain <node>`. Services reschedule
    onto the two surviving nodes, which already read `/mnt/nas` — this is what
    makes the swap safe.
-4. Reformat in place with that node's config, using the Delivery flow above
-   (serve.sh, PXE menu, `flatcar-install`, reboot).
+4. Reformat in place with the **Delivery flow above** (Ubuntu live +
+   `flatcar-install -f … -i …`, then reboot). cl02's disk is `/dev/sda` —
+   confirm with `lsblk` in the live session anyway.
 5. The node rejoins the **same** swarm via the baked token and comes up as a
-   manager with `/mnt/nas` mounted and docker gated on it.
+   new manager with `/mnt/nas` mounted and docker gated on it. `ssh-keygen -R`
+   the node IP first (host key changed). Expect the new engine (28.2.2) to
+   differ from the old nodes' 28.4.0 — tolerated skew, noted here so it does
+   not surprise anyone.
 6. Demote and remove the replaced node's **stale entry** — the reformatted
    node re-joined under a new identity, and the old entry keeps its raft seat
    until demoted. With it, a three-manager swarm carries four raft members
@@ -525,15 +569,23 @@ Per node:
    `--force` if the entry still shows down), so the manager count matches
    reality before the next swap.
 7. Activate and rebalance: `docker node update --availability active <node>`,
-   then `./rebalance.sh`.
-8. Verify the node: `findmnt /mnt/nas`, `systemctl show docker -p Requires`
-   includes `mnt-nas.mount`, `docker node ls` shows it `Ready`/`Reachable`,
-   keepalived `BACKUP` (cl01) with the VIP still held by an old node, resolvers
-   pinned (`resolvectl dns enp1s0` = `10.10.10.20`; a container resolves
-   `home.danhughes.dev`), and services healthy on it.
+   then `stacks/rebalance.sh` (with `DOCKER_CONTEXT=swarm`; it lives in
+   `stacks/`, not the repo root). The rebalance pulls every image onto the new
+   node — budget 15+ minutes, and a killed client is fine: rollouts continue
+   server-side.
+8. Verify the node: `findmnt /mnt/nas` (nfs4, vers=4.0, hard),
+   `systemctl show docker -p Requires` includes `mnt-nas.mount`, `docker node
+   ls` shows it `Ready`/`Reachable`, keepalived `active` + `BACKUP` with the
+   VIP still held by an old node (`ip -br addr | grep 10.10.10.20` from the
+   VIP), `resolvectl dns enp1s0` = `10.10.10.20` only, a container resolves
+   `home.danhughes.dev`, services healthy on it, and a file written on the new
+   node's `/mnt/nas` appears on another node owned `1000:1000` (delete it
+   after).
 
-Repeat for cl02, then cl03. When cl03 — the last old node — is reformatted, the
-VIP moves to a Flatcar node and `10.10.10.20` resolves to it; DNS is unchanged.
+cl03 is done. When **cl01** — the last old node — is reformatted, the VIP moves
+to a Flatcar node and `10.10.10.20` resolves to it; DNS is unchanged. After
+cl01's swap, restore `KEEPALIVED_STATE=MASTER` / `KEEPALIVED_PRIORITY=100` in
+`nodes/cl01.env` and re-render (see section 2).
 
 **Verify (whole phase):** three managers `Ready`/`Reachable`; VIP on Flatcar;
 every service healthy after rebalance; certificates still valid (`acme.json`
