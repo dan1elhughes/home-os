@@ -78,10 +78,18 @@ upgrades, `loginctl enable-linger`, and the Raspberry Pi `init.sh`.
 
 ## Notes and known limits
 
-- **keepalived is disabled and needs a sysext.** Flatcar has no keepalived
-  binary. It comes from a community `keepalived` systemd-sysext that is not
-  wired up yet; the service is included but `enabled: false`. Add the sysext
-  and enable the unit at Phase 3 (cl01) and Phase 4 (followers).
+- **keepalived ships via the sysext-bakery extension.** The pinned
+  `keepalived-v2.3.1-x86-64.raw` (SHA256 1f5ed620…) is committed under `files/`
+  and baked into every config; `/etc/extensions/keepalived.raw` symlinks it into
+  `/opt/extensions/keepalived/`, and `keepalived.service` is `enabled: true`.
+  All nodes render `BACKUP@50` for the migration window; restore cl01 to
+  `MASTER@100` after the final swap. QEMU pre-flight (2026-09-26): the sysext
+  merges, the binary starts, the election enters BACKUP then holds the VIP in
+  the isolated guest net. NOTE: the QEMU slirp NAT cannot present a reserved
+  source port, so the NFS mount cannot be exercised under QEMU (TrueNAS
+  requires reserved ports; no `insecure` on the exports) — the mount unit is
+  proven on the real nodes (Phase 1) and gets re-proven on Flatcar at the cl01
+  swap itself.
 - **`KEEPALIVED_INTERFACE`** is `enp1s0`, taken from the existing nodes
   (`ip -br link`; `wlo1` is the unused Wi-Fi). Flatcar uses the same predictable
   naming, but confirm it on the booted node before Phase 3. The same variable

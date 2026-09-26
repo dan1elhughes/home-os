@@ -75,6 +75,19 @@ storage:
       contents:
         local: keepalived.conf
 
+    # --- keepalived sysext ---------------------------------------------------
+    # The keepalived binary comes from the official sysext-bakery, pinned by
+    # version AND content (SHA256 1f5ed62072af4993be61a585cd8c3a773a67969142d2
+    # b964a38ef20b132a1790 for this v2.3.1 x86-64 image; verify on change).
+    # Baked into the config (render.sh copies it into the files dir), so the
+    # node needs no network fetch at boot. No systemd-sysupdate config is
+    # shipped, so nothing ever updates the extension out of band: it changes
+    # only when a new .raw is committed here and nodes are re-rendered.
+    - path: /opt/extensions/keepalived/keepalived-v2.3.1-x86-64.raw
+      mode: 0644
+      contents:
+        local: keepalived-v2.3.1-x86-64.raw
+
     # Host resolver: pin the dns-stack VIP. Flatcar resolves through
     # systemd-resolved, which takes its servers from networkd; DHCP would
     # otherwise add the router's resolver, which cannot resolve
@@ -100,6 +113,13 @@ storage:
 
           [DHCPv4]
           UseDNS=false
+
+    # systemd-sysext merges /opt/extensions into /usr through the /etc/extensions
+    # symlink below — this is what makes /usr/bin/keepalived exist.
+  links:
+    - path: /etc/extensions/keepalived.raw
+      target: /opt/extensions/keepalived/keepalived-v2.3.1-x86-64.raw
+      hard: false
 
 systemd:
   units:
@@ -166,10 +186,14 @@ systemd:
       contents_local: ${SWARM_UNIT_FILE}
 
     # --- keepalived ---------------------------------------------------------
-    # Included but disabled: the binary comes from a community Flatcar sysext
-    # that is not wired up yet. Enable out of band at Phase 3.
+    # Runs from the sysext above. All three nodes start BACKUP@50 during the
+    # migration (below the old nodes: leader 100, followers 90) so Flatcar only
+    # takes the VIP if an old MASTER dies — never by preemption. After the last
+    # swap, restore cl01 to MASTER@100 (nodes/cl01.env KEEPALIVED_STATE/
+    # KEEPALIVED_PRIORITY, re-render). Values come from nodes/*.env and must
+    # match the live cluster election (instance, id 51, PASS auth, VIP).
     - name: keepalived.service
-      enabled: false
+      enabled: true
       contents: |
         [Unit]
         Description=Keepalived

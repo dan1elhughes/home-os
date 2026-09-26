@@ -61,6 +61,9 @@ render_node() {
     : "${KEEPALIVED_PASSWORD:?set KEEPALIVED_PASSWORD to render keepalived.conf}"
     envsubst "$KEEPALIVED_VARS" < files/keepalived.conf.tmpl > "$files/keepalived.conf"
 
+    # The keepalived sysext (pinned .raw) is embedded into the config by butane.
+    cp files/keepalived-v2.3.1-x86-64.raw "$files/"
+
     # Swarm unit: init for cl01, join (with the baked manager token) otherwise.
     if [ "$SWARM_UNIT_FILE" = "swarm-join.service" ]; then
         : "${SWARM_JOIN_TOKEN:?set SWARM_JOIN_TOKEN to render a join node}"
