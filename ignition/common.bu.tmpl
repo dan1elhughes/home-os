@@ -30,13 +30,19 @@ storage:
       contents:
         inline: ${NODE_NAME}
 
-    - path: /etc/sudoers.d/core
+    # NOTE: must NOT be /etc/sudoers.d/core — Ignition's users section writes
+    # that exact path for the core user's sudo grant, and the collision makes
+    # Ignition CRITICAL-fail every boot. A distinct drop-in name is identical
+    # in effect.
+    - path: /etc/sudoers.d/10-core
+      overwrite: true
       mode: 0440
       contents:
         inline: |
           core ALL=(ALL) NOPASSWD: ALL
 
     - path: /etc/ssh/sshd_config.d/10-hardening.conf
+      overwrite: true
       mode: 0644
       contents:
         inline: |
@@ -71,6 +77,7 @@ storage:
           LOCKSMITHD_REBOOT_WINDOW_LENGTH=1h
 
     - path: /etc/keepalived/keepalived.conf
+      overwrite: true
       mode: 0644
       contents:
         local: keepalived.conf
@@ -101,6 +108,7 @@ storage:
     # needed. The QEMU pre-flight confirms the lease and the resolver
     # (networkctl status, resolvectl dns).
     - path: /etc/systemd/network/10-cluster.network
+      overwrite: true
       mode: 0644
       contents:
         inline: |
@@ -116,13 +124,33 @@ storage:
 
     # systemd-sysext merges /opt/extensions into /usr through the /etc/extensions
     # symlink below — this is what makes /usr/bin/keepalived exist.
+    # Flatcar ships neither /etc/timezone nor /etc/localtime; two stacks
+    # (gitea, homeassistant) ro-bind them from the host, so both must exist
+    # with the same zone as the old nodes (Etc/UTC).
+    - path: /etc/timezone
+      overwrite: true
+      mode: 0644
+      contents:
+        inline: |
+          Etc/UTC
+
   links:
     - path: /etc/extensions/keepalived.raw
       target: /opt/extensions/keepalived/keepalived-v2.3.1-x86-64.raw
       hard: false
+    - path: /etc/localtime
+      target: /usr/share/zoneinfo/Etc/UTC
+      hard: false
 
 systemd:
   units:
+    # Gate network-online.target on the real DHCP lease. Without this the
+    # target is reached before any interface has an address and mnt-nas.mount
+    # races the network (lost on real hardware: "Network is unreachable" at
+    # boot+0s; QEMU's instant link never exposed it).
+    - name: systemd-networkd-wait-online.service
+      enabled: true
+
     # --- TrueNAS config export ---------------------------------------------
     - name: mnt-nas.mount
       enabled: true
@@ -206,3 +234,16 @@ systemd:
 
         [Install]
         WantedBy=multi-user.target
+      dropins:
+        - name: zz-override.conf
+          contents: |
+            # The keepalived sysext ships 10-keepalived.conf which replaces
+            # ExecStart with a daemonizing command (no --dont-fork). Under our
+            # Type=simple unit the parent then exits, systemd kills the
+            # cgroup, and the service restart-loops. Re-assert the foreground
+            # form; keepalived's default config path already is
+            # /etc/keepalived/keepalived.conf.
+            [Service]
+            ExecStartPre=
+            ExecStart=
+            ExecStart=/usr/bin/keepalived --dont-fork --log-console
