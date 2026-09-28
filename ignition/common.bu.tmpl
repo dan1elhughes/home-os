@@ -151,6 +151,20 @@ systemd:
     - name: systemd-networkd-wait-online.service
       enabled: true
 
+    # --- Mask stock systemd-sysupdate-reboot -------------------------------
+    # Flatcar ships the systemd-sysupdate timers enabled by default, but
+    # nothing manages updates through sysupdate here: update-engine stages
+    # updates and locksmithd reboots (see /etc/flatcar/update.conf below).
+    # So every morning systemd-sysupdate-reboot.service finds no sysupdate
+    # version sets ("Couldn't find any suitable installed versions"), exits 1
+    # and systemd reports degraded forever. Masking the timer and service is
+    # the upstream-sanctioned fix for hosts that do not use sysupdate
+    # (flatcar/Flatcar#1979, #1983 — maintainers call it harmless).
+    - name: systemd-sysupdate-reboot.service
+      mask: true
+    - name: systemd-sysupdate-reboot.timer
+      mask: true
+
     # --- TrueNAS config export ---------------------------------------------
     - name: mnt-nas.mount
       enabled: true
