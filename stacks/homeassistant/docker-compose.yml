@@ -35,7 +35,7 @@ services:
       start_period: 10s
 
   trmnl-ha:
-    image: ghcr.io/usetrmnl/trmnl-ha-amd64:0.10.3
+    image: ghcr.io/usetrmnl/trmnl-ha-amd64:0.11.0
     volumes:
       - /mnt/nas/trmnl:/data
     environment:
