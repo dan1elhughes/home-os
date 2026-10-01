@@ -67,7 +67,7 @@ services:
         - 'kuma.adguard-ui.http.accepted_statuscodes=["200-299","302"]'
 
   generator:
-    image: python:3.13-alpine
+    image: python:3.14-alpine
     entrypoint: ["python", "/run/dns/generator.py"]
     networks: [default]
     environment:
