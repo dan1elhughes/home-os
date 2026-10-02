@@ -24,17 +24,24 @@ out/                        generated *.bu / *.ign (git-ignored; hold secrets)
 ## Render
 
 Butane and `ignition-validate` run in containers, so nothing needs installing.
-Secrets come from the environment and are never committed:
+Secrets come from the Homebase 1Password environment (the same one deploy.sh
+wraps itself with), and `render.sh` re-execs inside `op run` to fetch them:
 
 ```sh
-cd ignition
-KEEPALIVED_PASSWORD='<vrrp pass>' \
-SWARM_JOIN_TOKEN='<manager join token>' \
-  ./render.sh cl01          # or: all
+./render.sh cl01          # or: all
 ```
 
-- `KEEPALIVED_PASSWORD` is required for every node.
-- `SWARM_JOIN_TOKEN` is required for join nodes (cl02/cl03).
+Required environment variables (1Password > Developer > Environments, or
+export and `HOMEOS_OP_ACTIVE=1 ./render.sh …` to skip the op wrap):
+
+- `KEEPALIVED_PASSWORD` — VRRP auth, every node.
+- `SWARM_JOIN_TOKEN` — manager join token, join nodes (cl02/cl03).
+- `UPS_NUT_USER`/`UPS_NUT_PASS` — optional; empty by default because the
+  watcher reads `ups.status` anonymously — pi-nut grants it to any LAN
+  client, which is also how the home-assistant nut integration reads it.
+  Defaults to `UPS_NUT_HOST=10.10.10.12:3493` in `nodes/<node>.env` (not a
+  secret); an exported 1Password value wins. Rendered per node into
+  `/etc/ups-watcher/creds` (0600).
 - SSH keys are fetched from `https://danhughes.dev/keys` unless `SSH_KEYS_FILE`
   points at a local file.
 
@@ -72,6 +79,7 @@ runbook.
 | `docker` | `docker-prune` service+timer, container resolver pin (`/etc/docker/daemon.json`) — Docker itself ships with Flatcar |
 | `swarm` | `swarm.service` (all nodes join the live swarm), Docker `Requires=mnt-nas.mount` drop-in |
 | `keepalived` | `/etc/keepalived/keepalived.conf` + a disabled `keepalived.service` |
+| (`new`) | `ups-watcher.service` / `ups-undrain.service` + the pinned `/opt/bin/ups-watcher` binary (battery-event shutdown) and the `75-wol.link` Wake-on-LAN arm |
 
 Dropped with the move to Flatcar: `cockpit`, `sysstat`, `lm-sensors`, apt
 upgrades, `loginctl enable-linger`, and the Raspberry Pi `init.sh`.

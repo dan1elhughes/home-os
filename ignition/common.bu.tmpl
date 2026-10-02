@@ -134,6 +134,50 @@ storage:
         inline: |
           Etc/UTC
 
+    # --- UPS battery-event watcher ----------------------------------------
+    # Nodes are watchdogs for rack power: a peers' drain + poweroff and a
+    # survivor's low-battery poweroff are decided by a pinned stdlib-only
+    # Go binary speaking raw NUT to pi-nut's upsd. The
+    # binary is SHA-pinned in ignition/files/SHA256SUMS; NUT credentials
+    # ride in /etc/ups-watcher/creds (0600, rendered from the environment —
+    # never committed), UPS_ROLE comes from nodes/<node>.env.
+    - path: /opt/bin/ups-watcher
+      mode: 0755
+      contents:
+        local: ups-watcher-linux-amd64
+
+    - path: /etc/systemd/system/ups-watcher.service
+      mode: 0644
+      contents:
+        local: ups-watcher.service
+
+    - path: /etc/systemd/system/ups-undrain.service
+      mode: 0644
+      contents:
+        local: ups-undrain.service
+
+    # Credentials + role: rendered by render.sh from the 1Password secrets
+    # (UPS_NUT_USER/UPS_NUT_PASS), never committed.
+    - path: /etc/ups-watcher/creds
+      overwrite: true
+      mode: 0600
+      contents:
+        local: ups-watcher-creds
+
+    # Arm Wake-on-LAN on the cluster NIC for the NAS-side recovery bursts
+    # (75- so it sorts after the 10- network match, though .link files are
+    # independent of .network files).
+    - path: /etc/systemd/network/75-wol.link
+      overwrite: true
+      mode: 0644
+      contents:
+        inline: |
+          [Match]
+          OriginalName=${KEEPALIVED_INTERFACE}
+
+          [Link]
+          WakeOnLan=magic
+
   links:
     - path: /etc/extensions/keepalived.raw
       target: /opt/extensions/keepalived/keepalived-v2.3.1-x86-64.raw
@@ -261,3 +305,13 @@ systemd:
             ExecStartPre=
             ExecStart=
             ExecStart=/usr/bin/keepalived --dont-fork --log-console
+
+    # --- UPS watcher + boot-time drain release ------------------------------
+    # Units live in storage.files above; entries here just enable them.
+    # Roles: cl01 = survivor (stays up to LB), cl02/cl03 = peer (drain +
+    # poweroff, then release on next boot). Set UPS_ROLE in nodes/*.env.
+    - name: ups-watcher.service
+      enabled: true
+
+    - name: ups-undrain.service
+      enabled: true

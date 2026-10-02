@@ -1,0 +1,18 @@
+[Unit]
+Description=UPS battery-event watcher (NUT at the pi-nut upsd)
+# The watcher must not run before docker (peers drain through it) and not
+# before the network (the NUT endpoint rides the LAN).
+Wants=network-online.target
+After=network-online.target docker.service
+
+[Service]
+Type=simple
+Environment=UPS_LOG=/var/log/ups-watcher.log
+EnvironmentFile=/etc/ups-watcher/creds
+ExecStart=/opt/bin/ups-watcher watch
+# A missed probe is an event, not a crash: restart aggressively anyway.
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

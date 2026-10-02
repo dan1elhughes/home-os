@@ -1,0 +1,6 @@
+# SHA-256 pins for committed binaries. Verify after rebuilding:
+#   shasum -a 256 -c SHA256SUMS
+# A changed hash means a new build is intended; update deliberately (same
+# pattern as the keepalived sysext .raw pin).
+9c2ef2f4324ba7f10082901ec5be109f75f4715385ac2c4053b9f8f4d80434a8  ups-watcher-linux-amd64
+7c0386166855b922a06e3618405767143e5323abe525a6473b1df4dc449adc12  wol-on-boot-linux-amd64
