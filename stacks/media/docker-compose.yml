@@ -42,7 +42,7 @@ services:
         - "kuma.prowlarr.http.url=http://prowlarr:9696/ping"
 
   radarr:
-    image: ghcr.io/linuxserver/radarr:6.3.0
+    image: ghcr.io/linuxserver/radarr:6.4.4
     environment:
       - PUID=${PUID?error}
       - PGID=${PGID?error}
