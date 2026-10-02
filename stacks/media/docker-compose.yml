@@ -20,7 +20,7 @@ services:
         - "kuma.transmission.http.url=http://transmission:9091/transmission/web/"
 
   prowlarr:
-    image: ghcr.io/linuxserver/prowlarr:2.5.2
+    image: ghcr.io/linuxserver/prowlarr:2.6.5
     environment:
       - PUID=${PUID?error}
       - PGID=${PGID?error}
