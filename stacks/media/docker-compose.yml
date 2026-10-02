@@ -66,7 +66,7 @@ services:
         - "kuma.radarr.http.url=http://radarr:7878/ping"
 
   sonarr:
-    image: ghcr.io/linuxserver/sonarr:4.0.19
+    image: ghcr.io/linuxserver/sonarr:4.0.20
     environment:
       - PUID=${PUID?error}
       - PGID=${PGID?error}
