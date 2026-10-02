@@ -1,41 +1,32 @@
 # Agent notes — home-os
 
-Docker Swarm + Flatcar infra. Nodes are provisioned by Ignition
-(`ignition/`); Ansible is retired. Stacks live under `stacks/<name>/`; deploy from
-inside the `stacks/` directory with `DOCKER_CONTEXT=swarm ./deploy.sh <stack>`
-(or switch to the `swarm` context first). The script expects stack names relative
-to `stacks/`, wraps `op run` for 1Password secrets, content-hashes any
-`predbat/apps.yaml` into an immutable swarm config, and prunes superseded ones.
-Run it from inside `stacks/` — from the repo root the path resolution
-breaks and nothing deploys.
+## Deployment and live-system safety
 
-## Swarm access
-
-- Nodes: **cl01 = 10.10.10.21, cl02 = 10.10.10.22, cl03 = 10.10.10.23**.
-- Manager: `ssh 10.10.10.20`, or the local `swarm` docker context
-  (`docker context use swarm`).
-- Services move between nodes on redeploy. To find a service's container:
-  `ssh 10.10.10.20 'docker service ps <svc> --filter desired-state=running'`,
-  then `docker ps` / `docker exec` on that node. Don't assume a fixed node/id.
-- `/mnt/cephfs` is a CephFS mount replicated across cl01/cl02/cl03
-  (10.10.10.21/22/23). Create a bind-mount dir on **one** node only — it
-  propagates to the others. Don't `mkdir` on all three.
-- For a one-service change (e.g. a single Traefik label), `docker service update
-  --label-add …` is surgical and needs no secrets; `deploy.sh` always requires
-  the full 1Password set because the compose file has `${VAR?error}` across
-  several services.
+- Run `DOCKER_CONTEXT=swarm ./deploy.sh <stack>` from inside `stacks/`.
+  Running it from the repository root breaks path resolution.
+- For a single service-label change, `docker service update --label-add …`
+  avoids a full stack deployment and its 1Password requirements. Keep the
+  repository configuration consistent with any live change.
+- Discover the current node and container with `docker service ps` and
+  `docker ps` before using `docker exec`. Do not assume fixed placement or IDs.
+- Create shared bind-mount directories on one node only.
+- Check the database schema and take a backup before writes. Discover the
+  actual database container on TrueNAS rather than assuming its name.
+  Ask for confirmation before destructive operations on this live home system.
+- Do not run `docker swarm init` on an existing cluster node.
+- `ignition/out/` contains secrets. Do not commit it or print its contents.
+- Check `journalctl -u ups-watcher -u ups-undrain` before changing a node's
+  drain state; do not override a power-protection drain without checking NUT.
+- Changes to power-control source do not update the binaries embedded by
+  Ignition. Rebuild the binaries and update their checksums when changing them.
 
 ## Traefik (ingress)
 
-Traefik runs in the `traefik` stack (swarm provider, `main` overlay network,
-`exposedbydefault=false`). Each service opts in via compose labels:
-`traefik.enable=true`, a `Host(...)` rule, and
-`traefik.http.services.<name>.loadbalancer.server.port=<port>` — the backend
-port Traefik forwards to. **Bad Gateway almost always means that port label
-doesn't match what the container actually listens on.** Verify with
-`docker exec <container> ss -tlnp` (or `netstat`) against the label.
+For Bad Gateway errors, check the service's backend port label against the
+container's actual listening port with `ss -tlnp` or `netstat`.
 
-**`*.danhughes.dev` is entirely internal — DNS only resolves over the VPN.**
+**Cluster service names under `*.danhughes.dev` are internal, accessible
+from the LAN or VPN.**
 Treat the domain as private network space. Services exposed on it do not need
 their own auth, TLS termination beyond Traefik's existing LetsEncrypt cert, or
 egress hardening, and there is no public-internet attack surface to worry
@@ -45,55 +36,27 @@ even on the internal domain, because anything on the VPN can reach it).
 
 ## Controlling Home Assistant
 
-HA runs in the `homeassistant` stack; config is in the **`../home-assistant`**
-repo (built with `./build.sh`, deployed with `./upload.sh` — rsync to
-`/mnt/cephfs/homeassistant` on the host). Operate it via its REST API:
+HA configuration lives in the sibling **`../home-assistant`** repository.
+Build with `./build.sh` and deploy with `./upload.sh` there.
 
-- **Base URL:** `https://home.danhughes.dev/api/` (Traefik). A long-lived token
-  is required (`Authorization: Bearer <token>`); it lives in the 1Password env
-  used by `deploy.sh` as `PREDBAT_TOKEN`, e.g.
-  `op run --environment <env> --account <acct> -- bash -c 'curl -s -H "Authorization: Bearer $PREDBAT_TOKEN" …'`.
-- **Read entity state:** `GET /api/states/<entity_id>` (or `/api/states` for all).
-  The `attributes` object holds the useful structured data (e.g. flow breakdowns,
-  `results` time-series, schedule lists).
-- **Read history:** `GET /api/history/period/<start_iso>?filter_entity_id=<id>&end_time=<end_iso>&minimal_response`.
-- **Call a service:** `POST /api/services/<domain>/<service>` with a JSON body.
-  Commonly used here:
-  - `template/reload` — reload `template.yaml` sensors (no restart needed).
-  - `homeassistant/check_config` (`POST /api/config/core/check_config`) — ALWAYS
-    validate before a restart on this live system.
-  - `homeassistant/restart` — needed for platform sensors / `utility_meter` /
-    new `!include`d top-level keys (template reload does NOT pick those up).
-- **Evaluate a template** (handy for the device/entity registry):
-  `POST /api/template` with `{"template": "{{ device_entities('<device_id>') | join('\n') }}"}`
-  or `device_attr('<device_id>', 'name')`. Device IDs are HA registry ids, not
-  containers.
-
-Recorder runs on Postgres (internal `homeassistant_postgres` service, overlay-net
-only — not manually attachable). Reach it on whichever node it's on:
-`ssh <node> 'docker exec <pg_container> psql -U homeassistant -d homeassistant -c "…"'`.
-Sanity-check schema and back up before any writes — this is a live home system;
-confirm before anything destructive.
+- Use the 1Password `PREDBAT_TOKEN` as the bearer token for the HA REST API.
+- Always validate with `POST /api/config/core/check_config` before a restart.
+- Prefer `template/reload` for template changes. Platform sensors,
+  `utility_meter`, and new top-level `!include` keys require a restart.
+- Do not edit generated `/config/secrets.yaml` files manually; container
+  startup overwrites them.
 
 ## Reading Predbat's plan
 
-Predbat (`homeassistant_predbat`) runs the optimiser in
-`Control charge & discharge` + `set_read_only: on` — it **plans only, commands
-nothing**. `apps.yaml` is in `stacks/homeassistant/predbat/`. **Any value changed
-via the Predbat HA UI** is persisted in `predbat_config.json` on the
-cephfs volume and **overrides `apps.yaml` on restart**. This includes
-`inverter_hybrid`, `set_reserve_min`, loss values, charge/window
-switches — basically everything exposed as a HA entity. If `apps.yaml`
-says one thing and the plan says another, check the JSON.
+**Values changed via the Predbat HA UI persist in `predbat_config.json` and
+override `apps.yaml` on restart.** If the configuration and plan disagree,
+check the persisted JSON before changing `apps.yaml`.
 
 Read the plan via the HA API:
 
-- **Full half-hourly plan:** `predbat.plan_html`, attribute **`raw`** — the
-  richest source. `raw["rows"]` is one dict per 30-min slot with `time`, `state`
-  (`Demand`/`Chrg`/`Exp`/`FrzChrg`/`HoldChrg`/…), `state_target` (target SoC% or
-  export floor%), `soc_percent`, `load_forecast`, `pv_forecast`, `import_rate`,
-  `export_rate`, `total_cost`. `raw` also has top-level `soc`, `soc_max`,
-  `reserve`, `end_record`, `totals`.
+- **Full half-hourly plan:** `predbat.plan_html`, attribute **`raw`**.
+  `raw["rows"]` contains each slot's state, target SoC/export floor, forecasts,
+  rates, and cost. Prefer it to the coarse next-window entities.
 - **Next charge/export window (coarse):** `predbat.best_charge_start/end/limit`,
   `predbat.best_export_start/end/limit`. Often empty (`[]`) when the optimiser
   decides not to act — check `predbat.status.attributes.debug`
@@ -107,6 +70,3 @@ Read the plan via the HA API:
   load divergence …`. An empty `Filtered charge windows [ ]` with `@ Xp 0%` raw
   windows means the optimiser set every charge target to 0 (no economic benefit),
   not that it failed to see the cheap window.
-
-Predbat itself never actuates the Enphase battery (unsupported inverter); a
-separate HA automation translates the plan into Enphase CFG/DTG schedules.
