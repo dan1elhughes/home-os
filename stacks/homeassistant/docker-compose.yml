@@ -112,7 +112,7 @@ services:
         - "kuma.homeassistant.http.url=http://homeassistant:8123/"
 
   predbat:
-    image: nipar44/predbat_addon:slim-v9.3.4
+    image: nipar44/predbat_addon:slim-v9.3.5
     environment:
       - TZ=${TZ?error}
       - WAIT_FOR_HA_HOST=homeassistant
