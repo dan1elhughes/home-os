@@ -148,7 +148,7 @@ services:
     volumes:
       - "/mnt/nas/ombi-config:/config"
     healthcheck:
-      test: curl -f http://localhost:3579/ || exit 1
+      test: curl -f http://localhost:3579/health || exit 1
     deploy:
       labels:
         - "traefik.enable=true"

@@ -1,4 +1,4 @@
-# TrueNAS SCALE custom app: the five databases that used to run on the swarm.
+# TrueNAS SCALE custom app: the databases that back the swarm apps.
 #
 # This runs on the NAS (10.10.10.60), NOT on the swarm. Do not add it under
 # stacks/ -- stacks/deploy.sh would try to deploy it to the swarm.
@@ -6,13 +6,14 @@
 # Local syntax check (no NAS needed):
 #   docker compose -f docker-compose.yml config
 #
-# All five containers share one host IP, so each Postgres needs its own host
-# port. The runbook's single "5432" cannot apply to four Postgres instances.
+# All containers share one host IP, so each Postgres needs its own host
+# port. The runbook's single "5432" cannot apply to several Postgres instances.
 # Port map (see README.md):
 #   homeassistant-postgres  5432   (recorder connects to @10.10.10.60:5432)
 #   immich-postgres         5433
 #   gitea-postgres          5434
 #   mcpjungle-postgres      5435
+#   ombi-postgres           5436
 #   kuma-mariadb            3306
 name: truenas-databases
 
@@ -87,6 +88,24 @@ services:
       - /mnt/SSD/local/cluster-db/mcpjungle:/var/lib/postgresql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U mcpjungle -d mcpjungle"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  ombi-postgres:
+    image: postgres:18.6
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ombi
+      POSTGRES_PASSWORD: ombi
+      POSTGRES_DB: ombi
+    ports:
+      - "10.10.10.60:5436:5432"
+    volumes:
+      - /mnt/SSD/local/cluster-db/ombi:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ombi -d ombi"]
       interval: 10s
       timeout: 5s
       retries: 5
