@@ -139,6 +139,28 @@ services:
         - "kuma.swiparr.http.name=Swiparr"
         - "kuma.swiparr.http.url=http://swiparr:4321/api/health"
 
+  ombi:
+    image: ghcr.io/linuxserver/ombi:4.53.10
+    environment:
+      - PUID=${PUID?error}
+      - PGID=${PGID?error}
+      - TZ=${TZ?error}
+    volumes:
+      - "/mnt/nas/ombi-config:/config"
+    healthcheck:
+      test: curl -f http://localhost:3579/ || exit 1
+    deploy:
+      labels:
+        - "traefik.enable=true"
+        - "traefik.http.routers.ombi.rule=Host(`ombi.danhughes.dev`)"
+        - "traefik.http.routers.ombi.entrypoints=websecure"
+        - "traefik.http.routers.ombi.tls=true"
+        - "traefik.http.routers.ombi.tls.certResolver=letsencrypt"
+        - "traefik.http.services.ombi.loadbalancer.server.port=3579"
+        - "traefik.swarm.network=main"
+        - "kuma.ombi.http.name=Ombi"
+        - "kuma.ombi.http.url=http://ombi:3579/"
+
 volumes:
   downloads:
     driver_opts:
