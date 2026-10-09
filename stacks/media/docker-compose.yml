@@ -140,7 +140,11 @@ services:
         - "kuma.swiparr.http.url=http://swiparr:4321/api/health"
 
   ombi:
-    image: ghcr.io/linuxserver/ombi:4.53.10
+    # 4.60.17-development: stable 4.53.10 uses the legacy X-MediaBrowser-Token
+    # header, which Jellyfin 12.0+ rejects (401). The Authorization-header fix
+    # is only in the development line for now. Move back to stable once a
+    # release carries it.
+    image: ghcr.io/linuxserver/ombi:4.60.17-development
     environment:
       - PUID=${PUID?error}
       - PGID=${PGID?error}

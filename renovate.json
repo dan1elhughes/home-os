@@ -29,6 +29,13 @@
     {
       "matchPackageNames": ["nipar44/predbat_addon"],
       "versioning": "regex:^slim-v(?<major>\\d+)\\.(?<minor>\\d+)\\.(?<patch>\\d+)$"
+    },
+    // Ombi's Jellyfin 12 authentication fix is only in the development line
+    // (4.60.x) so far. Pin Renovate to the `X.Y.Z-development` track; drop this
+    // rule and return to a stable tag once a release carries the fix.
+    {
+      "matchPackageNames": ["ghcr.io/linuxserver/ombi"],
+      "versioning": "regex:^(?<major>\\d+)\\.(?<minor>\\d+)\\.(?<patch>\\d+)-development$"
     }
   ]
 }
