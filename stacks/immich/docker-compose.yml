@@ -1,7 +1,7 @@
 services:
   # --- Immich Server ---
   immich-server:
-    image: ghcr.io/immich-app/immich-server:v3.2.4
+    image: ghcr.io/immich-app/immich-server:v3.3.3
     user: "3000:3000"
     environment:
       DB_HOSTNAME: 10.10.10.60
@@ -40,7 +40,7 @@ services:
 
   # --- Microservices Worker (global — one per node) ---
   immich-microservices:
-    image: ghcr.io/immich-app/immich-server:v3.2.4
+    image: ghcr.io/immich-app/immich-server:v3.3.3
     user: "3000:3000"
     environment:
       DB_HOSTNAME: 10.10.10.60
@@ -69,7 +69,7 @@ services:
 
   # --- Machine Learning ---
   immich-machine-learning:
-    image: ghcr.io/immich-app/immich-machine-learning:v3.2.4
+    image: ghcr.io/immich-app/immich-machine-learning:v3.3.3
     volumes:
       - ml-cache:/cache
     deploy:
