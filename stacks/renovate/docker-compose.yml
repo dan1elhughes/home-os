@@ -14,6 +14,7 @@ services:
       - RENOVATE_AUTODISCOVER=false
       - RENOVATE_PLATFORM=github
       - RENOVATE_REPOSITORIES=dan1elhughes/home-os
+      - 'RENOVATE_HOST_RULES=[{"hostType":"docker","matchHost":"ghcr.io","username":"dan1elhughes","password":"${RENOVATE_GIT_ACCESS_TOKEN}"}]'
       - RENOVATE_NODE_OPTIONS=--max-old-space-size=8192
       - PUID=${PUID?error}
       - PGID=${PGID?error}
