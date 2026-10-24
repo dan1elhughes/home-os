@@ -63,10 +63,10 @@ storage:
           }
 
     # Flatcar update/reboot strategy. reboot means locksmithd reboots as soon
-    # as an update is ready, but only inside the window below. The window is
-    # staggered per node (see nodes/*.env) so the three managers never reboot in
-    # the same hour and the swarm keeps quorum. This is the only reboot
-    # mechanism: a node with no staged update stays up.
+    # as an update is ready, but only inside the window below, which runs every
+    # day and is staggered per node (see nodes/*.env) so the three managers
+    # never reboot in the same hour and the swarm keeps quorum. This is the only
+    # reboot mechanism: a node with no staged update stays up.
     - path: /etc/flatcar/update.conf
       overwrite: true
       mode: 0420

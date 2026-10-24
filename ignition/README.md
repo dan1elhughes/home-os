@@ -120,9 +120,9 @@ upgrades, `loginctl enable-linger`, and the Raspberry Pi `init.sh`.
   `swarm-init.service.tmpl` is kept only to bootstrap a from-scratch rebuild.
 - **Reboots come only from locksmithd, staggered across the managers.**
   `/etc/flatcar/update.conf` sets `REBOOT_STRATEGY=reboot` with a one-hour
-  window: cl01 Sunday 02:00, cl02 03:00, cl03 04:00. A node reboots only when
+  window every day: cl01 02:00, cl02 03:00, cl03 04:00. A node reboots only when
   an update is staged, and only in its slot, so the managers never reboot
-  together and the swarm keeps quorum. There is no unconditional weekly reboot
+  together and the swarm keeps quorum. There is no unconditional reboot
   (the old Ansible cron is gone). Set the slot per node with
   `REBOOT_WINDOW_START` in `nodes/*.env`.
 - **`core` is the login user**.
