@@ -38,11 +38,9 @@ secrets:
     external: true
 
 configs:
-  # Swarm configs are immutable, so deploy.sh hashes the script and the pinned
-  # host keys; editing either rolls out a fresh pair and prunes the old one.
+  # doco-cd names each object with a content-hash suffix, rolls fresh objects
+  # on change and prunes the old (2026-10-24 doco-cd design doc).
   doctor_reconcile:
-    name: doctor_reconcile_${DOCTOR_SCRIPT_HASH:-dev}
     file: ./reconcile.sh
   doctor_known_hosts:
-    name: doctor_known_hosts_${DOCTOR_SCRIPT_HASH:-dev}
     file: ./known_hosts

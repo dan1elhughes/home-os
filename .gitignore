@@ -2,3 +2,4 @@
 .env
 ignition/out/
 .worktrees/
+__pycache__/

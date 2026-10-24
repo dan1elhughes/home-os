@@ -1,0 +1,96 @@
+# Deploy list for doco-cd. Every stack is an explicit document here while the
+# migration from stacks/deploy.sh is staged; `pause: true` holds each back
+# until it is migrated and verified. When all are live this file collapses to a
+# single document with auto_discover over stacks/ (see
+# docs/superpowers/specs/2026-10-24-doco-cd-auto-deploy-design.md).
+name: pairdrop
+working_dir: stacks/pairdrop
+environment:
+  PUID: "1000"
+  PGID: "1000"
+  TZ: Europe/London
+---
+name: sponsorblock
+working_dir: stacks/sponsorblock
+---
+name: apprise
+working_dir: stacks/apprise
+environment:
+  PUID: "1000"
+  PGID: "1000"
+  TZ: Europe/London
+---
+name: gitea
+working_dir: stacks/gitea
+environment:
+  PUID: "1000"
+  PGID: "1000"
+---
+name: jellyfin
+working_dir: stacks/jellyfin
+---
+name: mcpjungle
+working_dir: stacks/mcpjungle
+environment:
+  TZ: Europe/London
+---
+name: media
+working_dir: stacks/media
+environment:
+  PUID: "1000"
+  PGID: "1000"
+  TZ: Europe/London
+---
+name: netboot
+working_dir: stacks/netboot
+---
+name: immich
+working_dir: stacks/immich
+---
+name: truenas
+working_dir: stacks/truenas
+---
+name: uptime-kuma
+working_dir: stacks/uptime-kuma
+environment:
+  TZ: Europe/London
+---
+name: renovate
+working_dir: stacks/renovate
+environment:
+  PUID: "1000"
+  PGID: "1000"
+  TZ: Europe/London
+external_secrets:
+  RENOVATE_GIT_ACCESS_TOKEN: "op://Swarm Doco-CD/home-os deploy/RENOVATE_GIT_ACCESS_TOKEN"
+---
+name: homeassistant
+working_dir: stacks/homeassistant
+environment:
+  PUID: "1000"
+  PGID: "1000"
+  TZ: Europe/London
+external_secrets:
+  HA_RELOADER_TOKEN: "op://Swarm Doco-CD/home-os deploy/HA_RELOADER_TOKEN"
+  IMMICH_API_KEY_QUEUE_MANAGEMENT: "op://Swarm Doco-CD/home-os deploy/IMMICH_API_KEY_QUEUE_MANAGEMENT"
+  MQTT_PASSWORD: "op://Swarm Doco-CD/home-os deploy/MQTT_PASSWORD"
+  POSTCODE: "op://Swarm Doco-CD/home-os deploy/POSTCODE"
+  PREDBAT_TOKEN: "op://Swarm Doco-CD/home-os deploy/PREDBAT_TOKEN"
+  SOLCAST_API_TOKEN: "op://Swarm Doco-CD/home-os deploy/SOLCAST_API_TOKEN"
+  TRMNL_ACCESS_TOKEN: "op://Swarm Doco-CD/home-os deploy/TRMNL_ACCESS_TOKEN"
+---
+name: dns
+working_dir: stacks/dns
+---
+name: overlay-doctor
+working_dir: stacks/overlay-doctor
+environment:
+  DOCTOR_DRY_RUN: "0"
+---
+name: traefik
+working_dir: stacks/traefik
+external_secrets:
+  CF_API_TOKEN: "op://Swarm Doco-CD/home-os deploy/CF_API_TOKEN"
+---
+name: doco-cd
+working_dir: stacks/doco-cd
