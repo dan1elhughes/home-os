@@ -55,6 +55,27 @@ prune_dns_configs() {
     done
 }
 
+# Same content-hash trick for the overlay-doctor script and pinned host keys:
+# editing either file rolls the service with a fresh, immutable config pair.
+export_doctor_hash() {
+    local dir="$1"
+    unset DOCTOR_SCRIPT_HASH
+    if [ -f "$dir/reconcile.sh" ] && [ -f "$dir/known_hosts" ]; then
+        DOCTOR_SCRIPT_HASH="$(cat "$dir/reconcile.sh" "$dir/known_hosts" | shasum -a 256 | cut -c1-12)"
+        export DOCTOR_SCRIPT_HASH
+    fi
+}
+
+prune_doctor_configs() {
+    local cfg
+    for cfg in $(docker config ls --format '{{.Name}}' | grep '^doctor_' || true); do
+        case "$cfg" in
+            *"_${DOCTOR_SCRIPT_HASH:-none}") continue ;;
+        esac
+        docker config rm "$cfg" >/dev/null 2>&1 && echo "Pruned old config $cfg" || true
+    done
+}
+
 deploy_stack() {
     local dir="$1"
     if [ -f "$dir/docker-compose.yml" ]; then
@@ -65,10 +86,18 @@ deploy_stack() {
         else
             unset DNS_CONFIG_HASH
         fi
+        if [ "${dir%/}" = overlay-doctor ]; then
+            export_doctor_hash "$dir"
+        else
+            unset DOCTOR_SCRIPT_HASH
+        fi
         docker stack deploy --compose-file "$dir/docker-compose.yml" "${dir%/}" --detach=false --with-registry-auth
         prune_predbat_configs
         if [ "${dir%/}" = dns ]; then
             prune_dns_configs
+        fi
+        if [ "${dir%/}" = overlay-doctor ]; then
+            prune_doctor_configs
         fi
     else
         echo "No docker-compose.yml found in $dir, skipping."

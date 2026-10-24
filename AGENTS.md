@@ -58,6 +58,10 @@ overlay sandbox on each node is `/var/run/docker/netns/1-nns5xsdm8h`.
 - Delete a stale entry for an endpoint that now runs on the same node:
   `sudo nsenter --net=/var/run/docker/netns/1-nns5xsdm8h bridge fdb del <mac> dev vxlan0 dst <old-node-ip> self permanent`
 
+`stacks/overlay-doctor` does exactly this automatically every two minutes and
+logs each repair; see its README for the checks and how to remove it once
+Flatcar ships docker 29.9.0.
+
 ## Controlling Home Assistant
 
 HA configuration lives in the sibling **`../home-assistant`** repository.

@@ -1,0 +1,48 @@
+# Repairs stale overlay FDB entries until the engine fix lands (moby#52661,
+# fixed in 29.9.0). See README.md — this stack is meant to be deleted then.
+services:
+  overlay-doctor:
+    image: nicolaka/netshoot:v0.16
+    entrypoint: ["/bin/sh", "-c", "exec /bin/sh /doctor/reconcile.sh"]
+    environment:
+      - DOCTOR_NETWORK=main
+      - DOCTOR_NODES=cl01,10.10.10.21 cl02,10.10.10.22 cl03,10.10.10.23
+      - DOCTOR_INTERVAL=120
+      - DOCTOR_DRY_RUN=${DOCTOR_DRY_RUN:-0}
+    secrets:
+      - overlay_doctor_ssh_key
+    configs:
+      - source: doctor_reconcile
+        target: /doctor/reconcile.sh
+      - source: doctor_known_hosts
+        target: /doctor/known_hosts
+    # The loop writes an epoch stamp after each clean cycle, so a dead ssh
+    # path or a wiped authorised key shows up as an unhealthy service.
+    healthcheck:
+      test: ["CMD", "sh", "-c", "test $$(( $$(date +%s) - $$(cat /tmp/doctor-beat) )) -lt 600"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 180s
+    # Own network: attaching the doctor to `main` would add task churn to the
+    # very network it repairs. ssh to the node IPs routes via the host either way.
+    networks:
+      - doctor
+
+networks:
+  doctor:
+    driver: overlay
+
+secrets:
+  overlay_doctor_ssh_key:
+    external: true
+
+configs:
+  # Swarm configs are immutable, so deploy.sh hashes the script and the pinned
+  # host keys; editing either rolls out a fresh pair and prunes the old one.
+  doctor_reconcile:
+    name: doctor_reconcile_${DOCTOR_SCRIPT_HASH:-dev}
+    file: ./reconcile.sh
+  doctor_known_hosts:
+    name: doctor_known_hosts_${DOCTOR_SCRIPT_HASH:-dev}
+    file: ./known_hosts
