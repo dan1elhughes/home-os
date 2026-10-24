@@ -7,6 +7,10 @@ services:
       LOG_LEVEL: info
       SECRET_PROVIDER: "1password"
       SECRET_PROVIDER_ACCESS_TOKEN_FILE: /run/secrets/doco_cd_sa_token
+      # Deployment outcomes are reported to GitHub via a dedicated PAT stored
+      # as GIT_STATUS_TOKEN (commit statuses: read and write).
+      GIT_ACCESS_TOKEN: ${GIT_ACCESS_TOKEN?error}
+      GIT_COMMIT_STATUS: "true"
       # No inline deployments: the repo's own .doco-cd.yml owns the staged
       # migration, so un-pausing a stack is an ordinary commit.
       POLL_CONFIG: |
