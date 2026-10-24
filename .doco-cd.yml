@@ -78,7 +78,6 @@ external_secrets:
   PREDBAT_TOKEN: "op://Swarm Doco-CD/home-os deploy/PREDBAT_TOKEN"
   SOLCAST_API_TOKEN: "op://Swarm Doco-CD/home-os deploy/SOLCAST_API_TOKEN"
   TRMNL_ACCESS_TOKEN: "op://Swarm Doco-CD/home-os deploy/TRMNL_ACCESS_TOKEN"
-pause: true
 ---
 name: dns
 working_dir: stacks/dns
