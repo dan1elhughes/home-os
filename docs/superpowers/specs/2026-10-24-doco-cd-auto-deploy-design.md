@@ -214,6 +214,15 @@ story and the "temporary by design" rule.
 
 ## Left to the builder
 
+- Commit status reporting (`GIT_COMMIT_STATUS=true`) needs **its own GitHub
+  token** — a fine-grained PAT on `dan1elhughes/home-os` with *Commit statuses:
+  read and write*. The Renovate token is not to be reused. Wire it as a vault
+  field, then `external_secrets` → `GIT_ACCESS_TOKEN` in the `doco-cd`
+  deployment only.
+- Apprise notifications need a destination URL. The running Apprise API has an
+  empty config store, so nothing can be inferred from it; `APPRISE_NOTIFY_URLS`
+  has to come from a vault field. `APPRISE_API_URL` will be
+  `http://apprise_apprise:8000/notify`, which needs doco-cd attached to `main`.
 - Per-stack `timeout` and `force_image_pull`, if any, and the poll interval
   (5 minutes proposed).
 - `SELF_UPDATE_ENABLED`/`SELF_UPDATE_STRATEGY` for the controller deploying its
