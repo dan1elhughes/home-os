@@ -112,7 +112,7 @@ services:
         - "kuma.homeassistant.http.url=http://homeassistant:8123/"
 
   predbat:
-    image: nipar44/predbat_addon:slim-v9.4.3
+    image: nipar44/predbat_addon:slim-v9.5.0
     environment:
       - TZ=${TZ?error}
       - WAIT_FOR_HA_HOST=homeassistant
@@ -166,9 +166,7 @@ networks:
 configs:
   # Repo-owned Predbat config, delivered into the container as a swarm config
   # (the repo isn't present on the swarm host, so we can't bind-mount it).
-  # Swarm configs are immutable, so deploy.sh content-hashes apps.yaml into
-  # PREDBAT_APPS_HASH; editing the file changes the name and rolls out a fresh
-  # object automatically. deploy.sh also prunes the superseded configs.
+  # doco-cd names the object with a content-hash suffix, rolls a fresh one on
+  # change and prunes the old (see 2026-10-24 doco-cd design doc).
   predbat_apps:
-    name: predbat_apps_${PREDBAT_APPS_HASH:-dev}
     file: ./predbat/apps.yaml
