@@ -38,7 +38,8 @@ secrets:
     external: true
 
 configs:
-  # host keys; editing either rolls out a fresh pair and prunes the old one.
+  # doco-cd names each object with a content-hash suffix, rolls fresh objects
+  # on change and prunes the old (2026-10-24 doco-cd design doc).
   doctor_reconcile:
     file: ./reconcile.sh
   doctor_known_hosts:

@@ -88,7 +88,6 @@ name: overlay-doctor
 working_dir: stacks/overlay-doctor
 environment:
   DOCTOR_DRY_RUN: "0"
-pause: true
 ---
 name: traefik
 working_dir: stacks/traefik

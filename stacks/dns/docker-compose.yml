@@ -96,18 +96,15 @@ volumes:
     driver: local
 
 configs:
+  # doco-cd names each object with a content-hash suffix, rolls fresh objects
+  # on change and prunes the old (2026-10-24 doco-cd design doc).
   unbound:
-    name: dns_unbound_${DNS_CONFIG_HASH?error}
     file: ./unbound.conf
   entrypoint:
-    name: dns_entrypoint_${DNS_CONFIG_HASH?error}
     file: ./entrypoint.sh
   generator:
-    name: dns_generator_${DNS_CONFIG_HASH?error}
     file: ./generator.py
   adguard:
-    name: dns_AdGuardHome_${DNS_CONFIG_HASH?error}
     file: ./AdGuardHome.yaml
   adguard-entrypoint:
-    name: dns_adguard-entrypoint_${DNS_CONFIG_HASH?error}
     file: ./adguard-entrypoint.sh
