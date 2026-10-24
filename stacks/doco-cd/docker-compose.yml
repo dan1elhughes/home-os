@@ -7,6 +7,10 @@ services:
       LOG_LEVEL: info
       SECRET_PROVIDER: "1password"
       SECRET_PROVIDER_ACCESS_TOKEN_FILE: /run/secrets/doco_cd_sa_token
+      # Notifications go through the shared apprise API in key mode: the key
+      # holds the destination (Slack), so the urls field stays empty.
+      APPRISE_API_URL: http://apprise_apprise:8000/notify/3500643eb9f31f99c97b71c6019996194ff58986c849293c1b9d540c6f14116e
+      APPRISE_NOTIFY_LEVEL: success
       # Deployment outcomes are reported to GitHub via a dedicated PAT stored
       # as GIT_STATUS_TOKEN (commit statuses: read and write).
       GIT_ACCESS_TOKEN: ${GIT_ACCESS_TOKEN?error}
@@ -19,6 +23,8 @@ services:
           interval: 5m
     secrets:
       - doco_cd_sa_token
+    networks:
+      - main
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - doco_data:/data
@@ -29,6 +35,10 @@ services:
 
 secrets:
   doco_cd_sa_token:
+    external: true
+
+networks:
+  main:
     external: true
 
 volumes:
