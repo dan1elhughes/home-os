@@ -43,21 +43,17 @@ environment:
 ---
 name: netboot
 working_dir: stacks/netboot
-pause: true
 ---
 name: immich
 working_dir: stacks/immich
-pause: true
 ---
 name: truenas
 working_dir: stacks/truenas
-pause: true
 ---
 name: uptime-kuma
 working_dir: stacks/uptime-kuma
 environment:
   TZ: Europe/London
-pause: true
 ---
 name: renovate
 working_dir: stacks/renovate
