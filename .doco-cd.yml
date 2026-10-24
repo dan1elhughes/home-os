@@ -94,4 +94,3 @@ external_secrets:
 ---
 name: doco-cd
 working_dir: stacks/doco-cd
-pause: true
