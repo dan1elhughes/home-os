@@ -81,7 +81,6 @@ external_secrets:
 ---
 name: dns
 working_dir: stacks/dns
-pause: true
 ---
 name: overlay-doctor
 working_dir: stacks/overlay-doctor
