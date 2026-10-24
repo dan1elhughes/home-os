@@ -240,12 +240,25 @@ story and the "temporary by design" rule.
 - [x] 0b. The service-account token is stored as
       `Swarm Doco-CD service account token` in the Private vault and created as
       the swarm secret `doco_cd_sa_token`.
-- [ ] 1. Controller stack `stacks/doco-cd/` deployed, polling, with the swarm
-      token secret mounted.
-- [ ] 2. Root `.doco-cd.yml` with the explicit staged deployment list; first
-      stack migrated and verified.
-- [ ] 3. Stack-by-stack migration: un-pause each; convert the three
-      config-delivering stacks to `file:` configs as they come up.
-- [ ] 4. Laptop helper replacing `deploy.sh`, with mirrored config naming.
-- [ ] 5. Verification list (all six items) passed.
-- [ ] 6. Decommission `deploy.sh`, rewrite `AGENTS.md`, final doc tidy.
+- [x] 1. Controller deployed (`stacks/doco-cd/`), 1Password provider
+      initialised in-cluster, polling `master`. Swarm self-update needs **no**
+      `SELF_UPDATE_*` configuration: the swarm's rolling update replaces the
+      controller itself (verified, takeover to the newest revision observed).
+- [x] 2. First stack (pairdrop) deployed by the controller from `master`.
+- [x] 3. All seventeen stacks migrated and un-paused; the owned `name:` hash
+      overrides converted to doco-cd content-hash naming; deploy.sh-era config
+      objects pruned. Decision change: the deployment list lives in the repo's
+      root `.doco-cd.yml` (not inline `POLL_CONFIG` entries), so un-pausing is
+      an ordinary commit.
+- [x] 4. Laptop helper: `stacks/deploy-local.sh` → `deploy_local.py`.
+      Object naming confirmed reproducible:
+      `<stack>_<source file basename>_<sha256(file bytes)[:8]>`.
+      Verified end to end on overlay-doctor: local edit rolled a fresh config,
+      revert rolled back to the canonical object.
+- [x] 5. Verification: idle polls no-op; unrelated or no-op commits deploy
+      nothing (per-stack input comparison); laptop deploys survive idle polls;
+      all stacks healthy. Prepared but impossible to test without breaking
+      something: 1Password unavailability failing loudly — accepted as an
+      untested item, monitored through deploy failures.
+- [x] 6. `deploy.sh` deleted; `pull-updates.sh` now merges and pulls only;
+      `AGENTS.md` rewritten for the doco-cd flow.
