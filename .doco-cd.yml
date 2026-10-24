@@ -94,3 +94,5 @@ external_secrets:
 ---
 name: doco-cd
 working_dir: stacks/doco-cd
+external_secrets:
+  GIT_ACCESS_TOKEN: "op://Swarm Doco-CD/home-os deploy/RENOVATE_GIT_ACCESS_TOKEN"
