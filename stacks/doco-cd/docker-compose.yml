@@ -1,0 +1,31 @@
+services:
+  doco-cd:
+    # Pinned tag; Renovate manages this like every other image.
+    image: ghcr.io/kimdre/doco-cd:0.129.1
+    environment:
+      TZ: Europe/London
+      LOG_LEVEL: info
+      SECRET_PROVIDER: "1password"
+      SECRET_PROVIDER_ACCESS_TOKEN_FILE: /run/secrets/doco_cd_sa_token
+      # No inline deployments: the repo's own .doco-cd.yml owns the staged
+      # migration, so un-pausing a stack is an ordinary commit.
+      POLL_CONFIG: |
+        - url: https://github.com/dan1elhughes/home-os.git
+          reference: refs/heads/master
+          interval: 5m
+    secrets:
+      - doco_cd_sa_token
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - doco_data:/data
+    deploy:
+      placement:
+        constraints:
+          - node.role == manager
+
+secrets:
+  doco_cd_sa_token:
+    external: true
+
+volumes:
+  doco_data:
