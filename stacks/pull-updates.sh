@@ -20,9 +20,11 @@ done
 
 git pull --ff-only
 
+# doco-cd picks up merged changes on its next poll; report what it will apply.
 if [ ${#STACKS[@]} -eq 0 ]; then
     echo "No stack changes found."
     exit 0
 fi
 
-printf '%s\n' "${STACKS[@]}" | sort -u | xargs ./deploy.sh
+printf 'Wait for the next poll: doco-cd will apply %s\n' \
+    "$(printf '%s\n' "${STACKS[@]}" | sort -u | paste -sd' ' -)"
