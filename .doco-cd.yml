@@ -63,7 +63,6 @@ environment:
   TZ: Europe/London
 external_secrets:
   RENOVATE_GIT_ACCESS_TOKEN: "op://Swarm Doco-CD/home-os deploy/RENOVATE_GIT_ACCESS_TOKEN"
-pause: true
 ---
 name: homeassistant
 working_dir: stacks/homeassistant
