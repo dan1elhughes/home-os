@@ -28,13 +28,11 @@ environment:
 ---
 name: jellyfin
 working_dir: stacks/jellyfin
-pause: true
 ---
 name: mcpjungle
 working_dir: stacks/mcpjungle
 environment:
   TZ: Europe/London
-pause: true
 ---
 name: media
 working_dir: stacks/media
@@ -42,7 +40,6 @@ environment:
   PUID: "1000"
   PGID: "1000"
   TZ: Europe/London
-pause: true
 ---
 name: netboot
 working_dir: stacks/netboot
