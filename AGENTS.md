@@ -34,6 +34,30 @@ about. Don't add password/2FA layers on top unless the service itself demands it
 (e.g. an AI agent that can run shell — then add `OPENCODE_SERVER_PASSWORD`
 even on the internal domain, because anything on the VPN can reach it).
 
+## Swarm overlay network
+
+**Symptom:** a service is healthy and answers from some nodes, but containers
+on one node get connection timeouts to it by service name. The overlay VXLAN
+forwarding database (FDB) on the *source* node can keep a stale entry after a
+task moves to another node; packets then go to the wrong node and are dropped.
+Seen with engine 28.2.2 on 2026-10-24: four stale entries blackholed
+cl02→lidarr, cl02→radarr and cl03→swarm-cronjob for hours to weeks. A task
+restart does NOT fix it, and nothing rewrites the kernel entry by itself.
+
+Nodes: cl01=10.10.10.21, cl02=10.10.10.22, cl03=10.10.10.23; 10.10.10.20 is a
+VIP held by cl01 (the `swarm` docker context points at it). The `main`
+overlay sandbox on each node is `/var/run/docker/netns/1-nns5xsdm8h`.
+
+- Check the FDB on a source node:
+  `sudo nsenter --net=/var/run/docker/netns/1-nns5xsdm8h bridge fdb show | grep ' dst '`
+  Each remote endpoint MAC must point at the node that runs the task. Get the
+  endpoint MAC and node from `docker network inspect main` on each node and
+  `docker service ps`. Locally-hosted MACs must have no `dst` entry.
+- Fix a wrong remote entry:
+  `sudo nsenter --net=/var/run/docker/netns/1-nns5xsdm8h bridge fdb replace <mac> dev vxlan0 dst <node-ip> self permanent`
+- Delete a stale entry for an endpoint that now runs on the same node:
+  `sudo nsenter --net=/var/run/docker/netns/1-nns5xsdm8h bridge fdb del <mac> dev vxlan0 dst <old-node-ip> self permanent`
+
 ## Controlling Home Assistant
 
 HA configuration lives in the sibling **`../home-assistant`** repository.
