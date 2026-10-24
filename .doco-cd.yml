@@ -91,7 +91,6 @@ name: traefik
 working_dir: stacks/traefik
 external_secrets:
   CF_API_TOKEN: "op://Swarm Doco-CD/home-os deploy/CF_API_TOKEN"
-pause: true
 ---
 name: doco-cd
 working_dir: stacks/doco-cd
