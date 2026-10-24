@@ -12,7 +12,6 @@ environment:
 ---
 name: sponsorblock
 working_dir: stacks/sponsorblock
-pause: true
 ---
 name: apprise
 working_dir: stacks/apprise

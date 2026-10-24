@@ -12,7 +12,7 @@ services:
       POLL_CONFIG: |
         - url: https://github.com/dan1elhughes/home-os.git
           reference: refs/heads/master
-          interval: 5m
+          interval: 1m
     secrets:
       - doco_cd_sa_token
     volumes:
