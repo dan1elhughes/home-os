@@ -18,6 +18,10 @@ services:
       # Deployment outcomes are reported to GitHub via a dedicated PAT stored
       # as GIT_STATUS_TOKEN (commit statuses: read and write).
       GIT_ACCESS_TOKEN: ${GIT_ACCESS_TOKEN?error}
+      # doco-cd 0.130 refuses to start when a global credential has no host
+      # scope, so this list is required, not optional hardening.
+      GIT_AUTH_DOMAINS: |
+        - domains: [github.com]
       GIT_COMMIT_STATUS: "true"
       # No inline deployments: the repo's own .doco-cd.yml owns the staged
       # migration, so un-pausing a stack is an ordinary commit.
