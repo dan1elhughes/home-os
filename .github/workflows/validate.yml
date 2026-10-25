@@ -1,0 +1,39 @@
+name: validate
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+
+      - name: Go vet and test
+        run: |
+          go vet ./...
+          go test ./...
+
+      - uses: actions/setup-python@v7
+
+      - name: Install PyYAML
+        run: python -m pip install --quiet pyyaml
+
+      - name: Stacks and doco-cd config
+        run: .github/ci/check-config.sh
+
+      # The validator is taken from the image the renovate stack pins, so the
+      # check follows a renovate bump instead of needing its own version.
+      - name: Renovate config
+        run: |
+          tag="$(grep -hoE 'ghcr\.io/renovatebot/renovate:[^ ]+' stacks/renovate/docker-compose.yml | cut -d: -f2)"
+          docker run --rm -v "$PWD:/usr/src/app" -w /usr/src/app \
+            "ghcr.io/renovatebot/renovate:$tag" renovate-config-validator renovate.json

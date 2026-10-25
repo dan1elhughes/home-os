@@ -7,6 +7,9 @@
   "recreateWhen": "always",
   "dependencyDashboard": true,
   "fetchChangeLogs": "off",
+  // Renovate merges its own PRs instead of handing them to GitHub's
+  // auto-merge, so a merge waits for the next run and the `validate` check.
+  "platformAutomerge": false,
   "toolSettings": {
     "nodeMaxMemory": 4096
   },
@@ -36,6 +39,12 @@
     {
       "matchPackageNames": ["ghcr.io/linuxserver/ombi"],
       "versioning": "regex:^(?<major>\\d+)\\.(?<minor>\\d+)\\.(?<patch>\\d+)-development$"
+    },
+    // Patch and digest updates merge on their own once `validate` passes.
+    // Minor and major stay manual: a merge here deploys to the live swarm.
+    {
+      "matchUpdateTypes": ["patch", "digest"],
+      "automerge": true
     }
   ]
 }
