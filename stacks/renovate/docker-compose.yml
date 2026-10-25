@@ -19,6 +19,7 @@ services:
       - "cd.doco.job.skip_running=true"
       - "cd.doco.job.notify_on=failure"
     deploy:
+      replicas: 0
       restart_policy:
         condition: none
       labels:
