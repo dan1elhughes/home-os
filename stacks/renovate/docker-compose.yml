@@ -1,11 +1,4 @@
 services:
-  swarm-cronjob:
-    image: crazymax/swarm-cronjob:1
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-    environment:
-      - TZ=${TZ?error}
-
   renovate:
     image: ghcr.io/renovatebot/renovate:44.181.6
     environment:
@@ -19,8 +12,13 @@ services:
       - PUID=${PUID?error}
       - PGID=${PGID?error}
       - TZ=${TZ?error}
+    labels:
+      - "cd.doco.job.enabled=true"
+      - "cd.doco.job.schedule=@every 2m"
+      - "cd.doco.job.execution_mode=one_off"
+      - "cd.doco.job.skip_running=true"
+      - "cd.doco.job.notify_on=none"
     deploy:
-      replicas: 0
       restart_policy:
         condition: none
       labels:
@@ -31,10 +29,6 @@ services:
         - "traefik.http.routers.renovate.tls.certResolver=letsencrypt"
         - "traefik.http.services.renovate.loadbalancer.server.port=8080"
         - "traefik.swarm.network=main"
-        - "swarm.cronjob.enable=true"
-        - "swarm.cronjob.schedule=15 8 * * *"
-        - "swarm.cronjob.skip-running=true"
-        - "swarm.cronjob.replicas=1"
 
 networks:
   default:
