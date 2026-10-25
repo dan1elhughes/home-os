@@ -45,6 +45,12 @@
     {
       "matchUpdateTypes": ["patch", "digest"],
       "automerge": true
+    },
+    // Renovate cuts several releases a day, and each one redeploys this stack
+    // and sends a deploy notification. Take the latest once a week instead.
+    {
+      "matchPackageNames": ["ghcr.io/renovatebot/renovate"],
+      "schedule": ["before 6am on monday"]
     }
   ]
 }
