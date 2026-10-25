@@ -63,7 +63,7 @@ services:
         - "kuma.adguard-dns.dns.dns_resolve_type=A"
         - "kuma.adguard-dns.dns.dns_resolve_server=10.10.10.20"
         - "kuma.adguard-ui.http.name=AdGuard UI"
-        - "kuma.adguard-ui.http.url=http://adguard:3000"
+        - "kuma.adguard-ui.http.url=https://adguard.danhughes.dev/"
         - 'kuma.adguard-ui.http.accepted_statuscodes=["200-299","302"]'
 
   generator:
