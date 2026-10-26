@@ -7,6 +7,8 @@ services:
       LOG_LEVEL: info
       SECRET_PROVIDER: "1password"
       SECRET_PROVIDER_ACCESS_TOKEN_FILE: /run/secrets/doco_cd_sa_token
+      SECRET_PROVIDER_CACHE_ENABLED: "true"
+      SECRET_PROVIDER_CACHE_TTL: "1h"
       # doco-cd only sends when the urls field is non-empty (Notifier.configured),
       # so the same destination is passed alongside the named key. Apprise
       # de-duplicates identical URLs, so this still delivers exactly once.
