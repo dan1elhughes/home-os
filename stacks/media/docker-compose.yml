@@ -92,7 +92,7 @@ services:
         - "kuma.sonarr.http.url=https://sonarr.danhughes.dev/ping"
 
   lidarr:
-    image: ghcr.io/linuxserver/lidarr:3.1.0
+    image: ghcr.io/linuxserver/lidarr:3.1.6
     environment:
       - PUID=${PUID?error}
       - PGID=${PGID?error}
