@@ -1,7 +1,7 @@
 services:
   doco-cd:
     # Pinned tag; Renovate manages this like every other image.
-    image: ghcr.io/kimdre/doco-cd:0.130.0
+    image: ghcr.io/kimdre/doco-cd:0.131.0
     environment:
       TZ: Europe/London
       LOG_LEVEL: info
