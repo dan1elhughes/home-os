@@ -46,11 +46,11 @@ services:
       AUTOKUMA__ON_DELETE: delete
       # Defaults applied to every generated monitor:
       #   - assign the "Apprise (Slack)" notification (DB id 1)
-      #   - retry twice before marking down (smooths transient blips)
+      #   - retry five times before marking down (smooths transient blips)
       #   - tag as "Internal"
       AUTOKUMA__DEFAULT_SETTINGS: |-
         http.notificationIDList: {"1": true}
-        http.max_retries: 2
+        http.max_retries: 5
         http.tag_names: [{"name": "internal"}]
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
