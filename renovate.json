@@ -40,10 +40,9 @@
       "matchPackageNames": ["ghcr.io/linuxserver/ombi"],
       "versioning": "regex:^(?<major>\\d+)\\.(?<minor>\\d+)\\.(?<patch>\\d+)-development$"
     },
-    // Patch and digest updates merge on their own once `validate` passes.
-    // Minor and major stay manual: a merge here deploys to the live swarm.
+    // Major updates stay manual: a merge here deploys to the live swarm.
     {
-      "matchUpdateTypes": ["patch", "digest"],
+      "matchUpdateTypes": ["minor", "patch", "digest"],
       "automerge": true
     },
     // Renovate cuts several releases a day, and each one redeploys this stack
