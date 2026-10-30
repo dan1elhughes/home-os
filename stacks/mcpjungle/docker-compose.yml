@@ -1,7 +1,7 @@
 ---
 services:
   mcpjungle:
-    image: ghcr.io/mcpjungle/mcpjungle:0.4.6-stdio
+    image: ghcr.io/mcpjungle/mcpjungle:0.4.7-stdio
     environment:
       - TZ=${TZ?error}
       # TrueNAS database app (see truenas-databases/). Port 5435 is this
