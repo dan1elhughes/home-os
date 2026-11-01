@@ -1,6 +1,6 @@
 services:
   gitea:
-    image: docker.gitea.com/gitea:28.2
+    image: docker.gitea.com/gitea:28.3
     environment:
       - USER_UID=${PUID?error}
       - USER_GID=${PGID?error}
