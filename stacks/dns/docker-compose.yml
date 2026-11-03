@@ -21,7 +21,7 @@ services:
       mode: global
 
   adguard:
-    image: adguard/adguardhome:v0.107.79
+    image: adguard/adguardhome:v0.107.80
     entrypoint: ["/bin/sh", "/run/dns/adguard-entrypoint.sh"]
     networks: [default]
     ports:
