@@ -1,14 +1,14 @@
 # Repairs stale overlay FDB entries until the engine fix lands (moby#52661,
 # fixed in 29.9.0). See README.md — this stack is meant to be deleted then.
 services:
-  overlay-doctor:
+  overlay-doctor: &doctor
     image: nicolaka/netshoot:v0.16
     entrypoint: ["/bin/sh", "-c", "exec /bin/sh /doctor/reconcile.sh"]
-    environment:
-      - DOCTOR_NETWORK=main
-      - DOCTOR_NODES=cl01,10.10.10.21 cl02,10.10.10.22 cl03,10.10.10.23
-      - DOCTOR_INTERVAL=120
-      - DOCTOR_DRY_RUN=${DOCTOR_DRY_RUN:-0}
+    environment: &doctor-environment
+      DOCTOR_NETWORK: main
+      DOCTOR_NODES: cl01,10.10.10.21 cl02,10.10.10.22 cl03,10.10.10.23
+      DOCTOR_INTERVAL: "120"
+      DOCTOR_DRY_RUN: ${DOCTOR_DRY_RUN:-0}
     secrets:
       - overlay_doctor_ssh_key
     configs:
@@ -28,6 +28,14 @@ services:
     # very network it repairs. ssh to the node IPs routes via the host either way.
     networks:
       - doctor
+
+  ingress-doctor:
+    <<: *doctor
+    environment:
+      <<: *doctor-environment
+      DOCTOR_NETWORK: ingress
+      # Three per-node ingress endpoints remain even with no published services.
+      DOCTOR_MIN_ENDPOINTS: "3"
 
 networks:
   doctor:

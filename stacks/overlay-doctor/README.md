@@ -17,13 +17,15 @@ fixes — so this service repairs the entries itself until the engine ships.
 
 ## How it works
 
-Every 120s, from one container on whichever node the scheduler picks:
+Two independent workers check `main` and `ingress` every 120s. Each has its
+own heartbeat and safety checks. The ingress worker covers published ports,
+including DNS on `10.10.10.20:53`.
 
-1. One ssh round trip per node gathers that node's live endpoints on `main`
+1. One ssh round trip per node gathers that node's live endpoints on its network
    (`docker network inspect`) and its overlay FDB (`bridge fdb show` inside the
    network sandbox).
 2. It builds the truth table `endpoint MAC -> node that runs it`. Endpoint MACs
-   derive from the endpoint IPv4, and `main-endpoint` (the per-node LB endpoint)
+   derive from the endpoint IPv4, and the per-node LB endpoint
    is included, so every legitimate remote entry is covered.
 3. For each node it repairs rows that disagree: a wrong or missing `dst` gets
    `bridge fdb replace`, and a leftover `dst` for an endpoint that now runs on
@@ -33,6 +35,8 @@ Guards, so a partial view can never cause a wrong write:
 
 - A cycle is skipped unless all three nodes answer.
 - A cycle is skipped below `DOCTOR_MIN_ENDPOINTS` (default 10) endpoints.
+  The ingress worker uses 3: one per-node ingress endpoint remains on each
+  node even when no services publish ports.
 - Only MACs present in the truth table are touched. Entries for MACs that no
   live endpoint claims are counted (`unknown=`) and left alone — they are
   leftovers from long-dead containers and harmless.
@@ -47,11 +51,11 @@ silent silence.
 ## Deploy
 
 ```sh
-cd stacks && DOCKER_CONTEXT=swarm ./deploy.sh overlay-doctor
+cd stacks && ./deploy-local.sh overlay-doctor
 ```
 
-`deploy.sh` content-hashes `reconcile.sh` and `known_hosts` into the swarm
-config names, so editing either rolls the service and prunes the old pair.
+Normal deployment uses doco-cd after a merge to `master`. The command above
+deploys the working tree for local checks. Commit the change to keep it.
 
 The ssh key is a swarm secret (`overlay_doctor_ssh_key`). It is not in git. One
 time only, this is how it was made:
@@ -75,6 +79,7 @@ Regenerate the file and redeploy.
 
 ```sh
 docker service logs overlay-doctor_overlay-doctor --tail 20
+docker service logs overlay-doctor_ingress-doctor --tail 20
 ```
 
 Healthy output is one line per cycle, `fixes=0` when nothing is wrong:
@@ -95,6 +100,11 @@ truth file of `mac node-ip` lines:
 ```sh
 sh reconcile.sh --plan 10.10.10.22 truth.txt fdb-dump.txt
 ```
+
+Run the configuration test with `python3 -m unittest discover -s
+stacks/overlay-doctor/tests -v` from the repository root. Use
+`overlay-doctor_ingress-doctor` instead of `overlay-doctor_overlay-doctor` in
+the dry-run command to check ingress.
 
 ## Remove it
 
