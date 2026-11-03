@@ -31,9 +31,14 @@ including DNS on `10.10.10.20:53`.
    `bridge fdb replace`, and a leftover `dst` for an endpoint that now runs on
    that node gets `bridge fdb del`.
 
-Guards, so a partial view can never cause a wrong write:
+Guards that reduce the risk of repairs from a partial view:
 
 - A cycle is skipped unless all three nodes answer.
+- A node without a network sandbox counts as checked only if network inspection
+  succeeds and reports no local endpoints. This can occur on drained nodes.
+  The worker does not read or repair an FDB on that node. Inspection or sandbox
+  listing errors, multiple matching sandboxes, and a missing sandbox with local
+  endpoints still cause the whole cycle to be skipped.
 - A cycle is skipped below `DOCTOR_MIN_ENDPOINTS` (default 10) endpoints.
   The ingress worker uses 3: one per-node ingress endpoint remains on each
   node even when no services publish ports.
@@ -101,9 +106,10 @@ truth file of `mac node-ip` lines:
 sh reconcile.sh --plan 10.10.10.22 truth.txt fdb-dump.txt
 ```
 
-Run the configuration test with `python3 -m unittest discover -s
-stacks/overlay-doctor/tests -v` from the repository root. Use
-`overlay-doctor_ingress-doctor` instead of `overlay-doctor_overlay-doctor` in
+Run the configuration and reconciliation tests with `python3 -m unittest discover -s
+stacks/overlay-doctor/tests -v` from the repository root. The
+reconciliation tests run the remote gather script with local command fakes.
+Use `overlay-doctor_ingress-doctor` instead of `overlay-doctor_overlay-doctor` in
 the dry-run command to check ingress.
 
 ## Remove it

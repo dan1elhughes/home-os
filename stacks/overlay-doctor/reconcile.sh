@@ -7,8 +7,8 @@
 # see README.md for why this exists and how to remove it.
 #
 # Safety: repairs are limited to MACs that appear in the truth table, so a
-# partial view of the cluster can only cause a skipped cycle, never a wrong
-# write. Entries for unknown MACs are counted and left alone.
+# failed node inspection causes a skipped cycle. Entries for unknown MACs are
+# counted and left alone; endpoints can still change during a cycle.
 set -eu
 
 NETWORK=${DOCTOR_NETWORK:-main}
@@ -44,15 +44,21 @@ set -eu
 net=$1
 id=$(docker network inspect "$net" --format '{{.Id}}')
 id10=$(printf %s "$id" | cut -c1-10)
-sandbox=$(sudo ls /var/run/docker/netns | grep -E "^[0-9]+-${id10}$" || true)
-found=$(printf '%s\n' "$sandbox" | grep -c . || true)
+endpoints=$(docker network inspect "$net" --format '{{range .Containers}}{{.IPv4Address}} {{.MacAddress}}{{"\n"}}{{end}}')
+names=$(sudo ls /var/run/docker/netns)
+sandbox=$(printf '%s\n' "$names" | awk -v id="$id10" '$0 ~ "^[0-9]+-" id "$"')
+found=$(printf '%s\n' "$sandbox" | awk 'NF{n++} END{print n+0}')
+if [ "$found" -eq 0 ] && [ -z "$endpoints" ]; then
+    printf 'SANDBOX none\nENDPOINTS\nFDB\n'
+    exit 0
+fi
 if [ "$found" -ne 1 ]; then
     echo "expected one sandbox for $id10, found: ${sandbox:-none}" >&2
     exit 3
 fi
 echo "SANDBOX $sandbox"
 echo "ENDPOINTS"
-docker network inspect "$net" --format '{{range .Containers}}{{.IPv4Address}} {{.MacAddress}}{{"\n"}}{{end}}'
+printf '%s\n' "$endpoints"
 echo "FDB"
 sudo nsenter --net=/var/run/docker/netns/"$sandbox" bridge fdb show
 REMOTE
@@ -147,6 +153,7 @@ cycle() {
         name=${pair%%:*}
         ip=${pair#*:}
         sandbox=$(sandbox_of "$TMP/gather.$name")
+        [ "$sandbox" != "none" ] || continue
         fdb_section "$TMP/gather.$name" | fdb_pairs > "$TMP/fdb.$name"
         unknown=$((unknown + $(unknown_of "$TMP/truth.final" "$TMP/fdb.$name")))
         plan_body "$ip" "$TMP/truth.final" "$TMP/fdb.$name" > "$TMP/plan.$name"
