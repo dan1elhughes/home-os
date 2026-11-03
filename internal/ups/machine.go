@@ -126,7 +126,7 @@ func (m *Machine) OnProbe(ok bool, status string, now int64) (Decision, Event) {
 		}
 		if m.obCount == m.cfg.ConfirmOB {
 			// Confirmed on-battery. Only a peer begins the drain,
-			// exactly once per machine lifetime; the survivor is the
+			// once per battery event; the survivor is the
 			// last node and stays up through the outage — per spec it
 			// backs off only at LB or the watchdog. Both roles report
 			// the transition so the log shows what the node saw.
@@ -147,6 +147,7 @@ func (m *Machine) OnProbe(ok bool, status string, now int64) (Decision, Event) {
 			// the transition is still reported.
 			if m.cfg.Role == RolePeer && m.drained {
 				dec.Action = ActionUndrain
+				m.drained = false
 			}
 			ev = EvBackOnMains
 		}

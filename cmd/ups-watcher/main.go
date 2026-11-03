@@ -11,20 +11,27 @@
 package main
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
 	"strings"
+	"sync"
+	"syscall"
 	"time"
 
 	"github.com/dan1elhughes/home-os/internal/ups"
 )
 
 const (
-	pollInterval  = 10 * time.Second
-	drainDeadline = 600 * time.Second
-	drainPoll     = 15 * time.Second
-	dialTimeout   = 3 * time.Second
+	pollInterval   = 10 * time.Second
+	drainDeadline  = 600 * time.Second
+	drainPoll      = 15 * time.Second
+	dialTimeout    = 3 * time.Second
+	commandTimeout = 45 * time.Second
+	lockTimeout    = 10 * time.Second
+	urgentTimeout  = 15 * time.Second
 
 	defaultFlagDir = "/var/lib/ups-watcher"
 	defaultLogPath = "/var/log/ups-watcher.log"
@@ -91,6 +98,14 @@ func dial(cfg ups.DaemonConfig) (*ups.Client, error) {
 // on-battery status instead (Phase-2 rehearsal); production never sets
 // it.
 func probe(cfg ups.DaemonConfig) (string, bool) {
+	st, ok := realProbe(cfg)
+	if ok && os.Getenv("UPS_TEST_OB") == "1" {
+		return "OB DISCHRG", true
+	}
+	return st, ok
+}
+
+func realProbe(cfg ups.DaemonConfig) (string, bool) {
 	c, err := dial(cfg)
 	if err != nil {
 		return "", false
@@ -99,9 +114,6 @@ func probe(cfg ups.DaemonConfig) (string, bool) {
 	st, err := c.Status()
 	if err != nil {
 		return "", false
-	}
-	if os.Getenv("UPS_TEST_OB") == "1" {
-		return "OB DISCHRG", true
 	}
 	return st, true
 }
@@ -162,12 +174,16 @@ func runWatch() {
 		d := feed(m, cfg, log, "")
 		switch d.Action {
 		case ups.ActionDrain:
-			runDrain(m, cfg, log, suppressPoweroff)
+			if runDrain(m, cfg, log, suppressPoweroff) {
+				waitForPoweroff(log)
+			}
 		case ups.ActionUndrain:
-			undrainNow(log)
+			// Recovery is attempted below with a fresh status.
 		case ups.ActionShutdown:
 			shutdownNow(m, cfg, log, d)
+			waitForPoweroff(log)
 		}
+		recoverDrain(cfg, log)
 		time.Sleep(pollInterval)
 	}
 }
@@ -179,27 +195,33 @@ func runWatch() {
 // stops the local tasks before the replacements reach Running, and a
 // power-off in that gap removes raft quorum mid-reschedule, stranding
 // the workload.
-func runDrain(m *ups.Machine, cfg ups.DaemonConfig, log *ups.Logger, suppressPoweroff bool) {
+func runDrain(m *ups.Machine, cfg ups.DaemonConfig, log *ups.Logger, suppressPoweroff bool) bool {
 	log.Log("OB_CONFIRMED", fmt.Sprintf("%d consecutive OB probes; draining", cfg.ConfirmOB))
 
-	// Snapshot BEFORE the drain: this is the work that must land
-	// somewhere running before the node may power off.
 	survivor := survivorNode()
-	services := localTaskSnapshot(log)
-
-	log.Log("DRAIN_START", fmt.Sprintf("docker node update --availability drain %s; local=%s",
-		nodeID(), strings.Join(services, ",")))
-	if err := os.MkdirAll(flagDir(), 0o755); err != nil {
-		log.Log("DRAIN_ERROR", "mkdir flag dir: "+err.Error())
-	} else if err := os.WriteFile(flagFile(), []byte(time.Now().UTC().Format(time.RFC3339)), 0o644); err != nil {
-		log.Log("DRAIN_ERROR", "flag file: "+err.Error())
-	}
-	docker(log, "docker", "node", "update", "--availability", "drain", nodeID())
-
 	deadline := time.Now().Add(drainDeadline)
+	var services []string
+	snapshotted := false
+	drained := false
 	emptyLogged := false
 	lastMissing := ""
 	for {
+		if !drained {
+			var action ups.Action
+			drained, action = monitoredDrain(
+				func(ctx context.Context) bool { return drainAttempt(ctx, log, &services, &snapshotted) },
+				func() ups.Decision { return feed(m, cfg, log, " (draining)") }, pollInterval)
+			switch action {
+			case ups.ActionUndrain:
+				log.Log("ABORT_OL", "powers are back on before shutdown; undraining")
+				recoverDrain(cfg, log)
+				return false
+			case ups.ActionShutdown:
+				log.Log("SHUTDOWN", "low battery while draining; poweroff now")
+				poweroff(log)
+				return true
+			}
+		}
 		time.Sleep(drainPoll)
 
 		// Machine decisions outrank the task count: mains coming back
@@ -208,18 +230,18 @@ func runDrain(m *ups.Machine, cfg ups.DaemonConfig, log *ups.Logger, suppressPow
 		switch d.Action {
 		case ups.ActionUndrain:
 			log.Log("ABORT_OL", "powers are back on before shutdown; undraining")
-			undrainNow(log)
-			return
+			recoverDrain(cfg, log)
+			return false
 		case ups.ActionShutdown:
 			log.Log("SHUTDOWN", "low battery while draining; poweroff now")
 			poweroff(log)
-			return
+			return true
 		}
 
 		count, err := containerCount()
 		if err != nil {
 			log.Log("DRAIN_ERROR", "docker ps: "+err.Error())
-		} else if count == 0 {
+		} else if drained && count == 0 {
 			if !emptyLogged {
 				log.Log("DRAIN_EMPTY", "no running containers; waiting for the survivor to hold the work")
 				emptyLogged = true
@@ -229,12 +251,12 @@ func runDrain(m *ups.Machine, cfg ups.DaemonConfig, log *ups.Logger, suppressPow
 				log.Log("DRAIN_READY", fmt.Sprintf("survivor %s runs all expected work", survivor))
 				if suppressPoweroff {
 					log.Log("TEST_DONE", "poweroff suppressed; undraining instead")
-					undrainNow(log)
-					return
+					recoverDrain(cfg, log)
+					return false
 				}
 				log.Log("SHUTDOWN", "drained; work converged; powering off cleanly")
 				poweroff(log)
-				return
+				return true
 			}
 			if key := strings.Join(missing, ","); key != lastMissing {
 				log.Log("DRAIN_WAIT", fmt.Sprintf("survivor %s lacks work; missing=%s", survivor, key))
@@ -246,65 +268,198 @@ func runDrain(m *ups.Machine, cfg ups.DaemonConfig, log *ups.Logger, suppressPow
 			log.Log("DRAIN_DEADLINE", fmt.Sprintf("%s elapsed; powering off anyway", drainDeadline))
 			if suppressPoweroff {
 				log.Log("TEST_DONE", "poweroff suppressed; undraining instead")
-				undrainNow(log)
-				return
+				recoverDrain(cfg, log)
+				return false
 			}
 			poweroff(log)
-			return
+			return true
 		}
 	}
+}
+
+func monitoredDrain(attempt func(context.Context) bool, probe func() ups.Decision, interval time.Duration) (bool, ups.Action) {
+	if d := probe(); d.Action == ups.ActionShutdown || d.Action == ups.ActionUndrain {
+		return false, d.Action
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	result := make(chan bool, 1)
+	go func() { result <- attempt(ctx) }()
+	ticker := time.NewTicker(interval)
+	defer ticker.Stop()
+	for {
+		select {
+		case ok := <-result:
+			return ok, ups.ActionNone
+		case <-ticker.C:
+			d := probe()
+			if d.Action == ups.ActionShutdown || d.Action == ups.ActionUndrain {
+				cancel()
+				<-result
+				return false, d.Action
+			}
+		}
+	}
+}
+
+func drainAttempt(ctx context.Context, log *ups.Logger, services *[]string, snapshotted *bool) bool {
+	lockCtx, cancel := context.WithTimeout(ctx, lockTimeout)
+	defer cancel()
+	unlock, err := lockDrain(lockCtx)
+	if err != nil {
+		log.Log("DRAIN_ERROR", "lock: "+err.Error())
+		return false
+	}
+	defer unlock()
+	if ctx.Err() != nil {
+		return false
+	}
+	if !*snapshotted {
+		var err error
+		*services, err = localTaskSnapshot(ctx, log)
+		if err != nil {
+			return false
+		}
+		*snapshotted = true
+	}
+	if ctx.Err() != nil {
+		return false
+	}
+	log.Log("DRAIN_START", fmt.Sprintf("docker node update --availability drain %s; local=%s", nodeID(), strings.Join(*services, ",")))
+	if err := os.WriteFile(flagFile(), []byte(time.Now().UTC().Format(time.RFC3339)), 0644); err != nil {
+		log.Log("DRAIN_ERROR", "flag file: "+err.Error())
+	}
+	return dockerContext(ctx, log, "docker", "node", "update", "--availability", "drain", nodeID())
 }
 
 // undrainNow sets the node active again and clears the boot flag.
-func undrainNow(log *ups.Logger) {
+func undrainNow(log *ups.Logger) bool {
 	log.Log("UNDRAIN_START", "docker node update --availability active "+nodeID())
-	docker(log, "docker", "node", "update", "--availability", "active", nodeID())
+	if !docker(log, "docker", "node", "update", "--availability", "active", nodeID()) {
+		return false
+	}
 	if err := os.Remove(flagFile()); err != nil && !os.IsNotExist(err) {
 		log.Log("UNDRAIN_ERROR", "flag file: "+err.Error())
+		return false
 	}
 	log.Log("UNDRAIN_DONE", "node back to active; flag cleared")
+	return true
 }
 
-// shutdownNow handles ActionShutdown from the idle loop. A peer must be
-// drained first (watchdog/LB shutdown with the drain still pending); a
-// survivor powers off directly. Its drain wait is bounded and gated on
-// the same survivor-convergence check as runDrain.
-func shutdownNow(m *ups.Machine, cfg ups.DaemonConfig, log *ups.Logger, d ups.Decision) {
-	if d.ShutdownDrain && !drainedAlready() {
-		log.Log("DRAIN_START", "watchdog shutdown with pending drain: draining first")
-		survivor := survivorNode()
-		services := localTaskSnapshot(log)
-		_ = os.MkdirAll(flagDir(), 0o755)
-		_ = os.WriteFile(flagFile(), []byte(time.Now().UTC().Format(time.RFC3339)), 0o644)
-		docker(log, "docker", "node", "update", "--availability", "drain", nodeID())
-		// Bounded convergence wait; LB/OL handling is over: the machine
-		// is done.
-		deadline := time.Now().Add(drainDeadline)
-		lastMissing := ""
-		for {
-			time.Sleep(drainPoll)
-			count, err := containerCount()
-			if err != nil {
-				log.Log("DRAIN_ERROR", "docker ps: "+err.Error())
-			} else if count == 0 {
-				missing := survivorMissing(log, survivor, services)
-				if len(missing) == 0 {
-					log.Log("DRAIN_READY", fmt.Sprintf("survivor %s runs all expected work", survivor))
-					break
-				}
-				if key := strings.Join(missing, ","); key != lastMissing {
-					log.Log("DRAIN_WAIT", fmt.Sprintf("survivor %s lacks work; missing=%s", survivor, key))
-					lastMissing = key
-				}
-			}
-			if time.Now().After(deadline) {
-				log.Log("DRAIN_DEADLINE", fmt.Sprintf("%s elapsed; powering off anyway", drainDeadline))
-				break
-			}
+func lockDrain(ctx context.Context) (func(), error) {
+	if err := os.MkdirAll(flagDir(), 0755); err != nil {
+		return nil, err
+	}
+	f, err := os.OpenFile(flagDir()+"/lock", os.O_CREATE|os.O_RDWR, 0644)
+	if err != nil {
+		return nil, err
+	}
+	for {
+		err := syscall.Flock(int(f.Fd()), syscall.LOCK_EX|syscall.LOCK_NB)
+		if err == nil {
+			break
 		}
+		if !errors.Is(err, syscall.EWOULDBLOCK) && !errors.Is(err, syscall.EAGAIN) && !errors.Is(err, syscall.EINTR) {
+			f.Close()
+			return nil, err
+		}
+		select {
+		case <-ctx.Done():
+			f.Close()
+			return nil, ctx.Err()
+		case <-time.After(50 * time.Millisecond):
+		}
+	}
+	return func() { syscall.Flock(int(f.Fd()), syscall.LOCK_UN); f.Close() }, nil
+}
+
+func recoverDrain(cfg ups.DaemonConfig, log *ups.Logger) bool {
+	ctx, cancel := context.WithTimeout(context.Background(), lockTimeout)
+	defer cancel()
+	unlock, err := lockDrain(ctx)
+	if err != nil {
+		log.Log("UNDRAIN_ERROR", "lock: "+err.Error())
+		return false
+	}
+	defer unlock()
+	if !drainedAlready() {
+		return true
+	}
+	status, ok := realProbe(cfg)
+	if !ok || !safeForUndrain(status) {
+		logRecoveryStatus(log, status, ok)
+		return false
+	}
+	return undrainNow(log)
+}
+
+var recoveryStatus struct {
+	sync.Mutex
+	last string
+	at   time.Time
+}
+
+func logRecoveryStatus(log *ups.Logger, status string, ok bool) {
+	detail := "NUT unavailable; recovery waiting"
+	if ok {
+		detail = "ups.status=" + status + "; recovery waiting"
+	}
+	recoveryStatus.Lock()
+	defer recoveryStatus.Unlock()
+	if detail != recoveryStatus.last || time.Since(recoveryStatus.at) >= 5*time.Minute {
+		log.Log("STATUS", detail)
+		recoveryStatus.last = detail
+		recoveryStatus.at = time.Now()
+	}
+}
+
+func safeForUndrain(status string) bool {
+	if !ups.IsOL(status) {
+		return false
+	}
+	for _, word := range strings.Fields(status) {
+		if word == "OB" || word == "LB" {
+			return false
+		}
+	}
+	return true
+}
+
+// shutdownNow makes one bounded drain attempt before an urgent peer shutdown.
+func shutdownNow(m *ups.Machine, cfg ups.DaemonConfig, log *ups.Logger, d ups.Decision) {
+	if d.ShutdownDrain {
+		log.Log("DRAIN_START", "urgent shutdown: attempting drain")
+		ctx, cancel := context.WithTimeout(context.Background(), urgentTimeout)
+		prepareUrgentDrain(ctx, log)
+		cancel()
 	}
 	log.Log("SHUTDOWN", "poweroff now")
 	poweroff(log)
+}
+
+func prepareUrgentDrain(ctx context.Context, log *ups.Logger) bool {
+	unlock, err := lockDrain(ctx)
+	if err != nil {
+		log.Log("DRAIN_ERROR", "lock: "+err.Error())
+		return false
+	}
+	defer unlock()
+	if ctx.Err() != nil {
+		return false
+	}
+	if drainedAlready() {
+		out, err := dockerOutputContext(ctx, "node", "inspect", "--format", "{{.Spec.Availability}}", nodeID())
+		if err == nil && strings.TrimSpace(string(out)) == "drain" {
+			return true
+		}
+	}
+	if ctx.Err() != nil {
+		return false
+	}
+	if err := os.WriteFile(flagFile(), []byte(time.Now().UTC().Format(time.RFC3339)), 0644); err != nil {
+		log.Log("DRAIN_ERROR", "flag file: "+err.Error())
+	}
+	return dockerContext(ctx, log, "docker", "node", "update", "--availability", "drain", nodeID())
 }
 
 func drainedAlready() bool {
@@ -323,18 +478,16 @@ func survivorNode() string {
 }
 
 // localTaskSnapshot lists the distinct Swarm services running on this
-// node just before the drain is issued. On snapshot failure it returns
-// nil: the convergence gate then degrades to the historical
-// local-emptiness check instead of blocking the shutdown entirely.
-func localTaskSnapshot(log *ups.Logger) []string {
-	out, err := exec.Command("docker", "ps",
+// node just before the drain is issued.
+func localTaskSnapshot(ctx context.Context, log *ups.Logger) ([]string, error) {
+	out, err := dockerOutputContext(ctx, "ps",
 		"--filter", "label=com.docker.swarm.service.id",
-		"--format", `{{.Label "com.docker.swarm.service.name"}}`).Output()
+		"--format", `{{.Label "com.docker.swarm.service.name"}}`)
 	if err != nil {
 		log.Log("DRAIN_ERROR", "docker ps snapshot: "+err.Error())
-		return nil
+		return nil, err
 	}
-	return ups.SnapshotLocalServices(string(out))
+	return ups.SnapshotLocalServices(string(out)), nil
 }
 
 // survivorMissing returns the snapshotted services that still have no
@@ -346,9 +499,9 @@ func survivorMissing(log *ups.Logger, survivor string, services []string) []stri
 	if len(services) == 0 {
 		return nil
 	}
-	out, err := exec.Command("docker", "node", "ps", survivor,
+	out, err := dockerOutput("node", "ps", survivor,
 		"--filter", "desired-state=running",
-		"--format", "{{.Name}}\t{{.CurrentState}}").Output()
+		"--format", "{{.Name}}\t{{.CurrentState}}")
 	if err != nil {
 		log.Log("DRAIN_ERROR", "docker node ps "+survivor+": "+err.Error())
 		return append([]string(nil), services...)
@@ -357,7 +510,7 @@ func survivorMissing(log *ups.Logger, survivor string, services []string) []stri
 }
 
 func containerCount() (int, error) {
-	out, err := exec.Command("docker", "ps", "-q").Output()
+	out, err := dockerOutput("ps", "-q")
 	if err != nil {
 		return 0, err
 	}
@@ -370,19 +523,59 @@ func containerCount() (int, error) {
 	return n, nil
 }
 
-// poweroff powers the node down outside our own stop path (--no-block:
-// return immediately and let systemd sequence the shutdown target).
+// poweroff requests systemd to power down the node without waiting for shutdown.
 func poweroff(log *ups.Logger) {
-	docker(log, "/usr/bin/systemctl", "poweroff")
+	requestPoweroff(func() bool {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		return dockerContext(ctx, log, "/usr/bin/systemctl", "--no-block", "poweroff")
+	}, func() { time.Sleep(pollInterval) })
+}
+
+func requestPoweroff(request func() bool, wait func()) {
+	for !request() {
+		wait()
+	}
+}
+
+func waitForPoweroff(log *ups.Logger) {
+	for {
+		time.Sleep(time.Minute)
+		poweroff(log)
+	}
 }
 
 // docker runs a command and logs its failure; docker prune-style
 // failures must not wedge the loop.
-func docker(log *ups.Logger, name string, args ...string) {
-	out, err := exec.Command(name, args...).CombinedOutput()
+func docker(log *ups.Logger, name string, args ...string) bool {
+	return dockerContext(context.Background(), log, name, args...)
+}
+
+func dockerContext(parent context.Context, log *ups.Logger, name string, args ...string) bool {
+	ctx, cancel := context.WithTimeout(parent, commandTimeout)
+	defer cancel()
+	out, err := command(ctx, name, args...)
 	if err != nil {
 		log.Log("EXEC_ERROR", fmt.Sprintf("%s: %v: %s", args[0], err, strings.TrimSpace(string(out))))
+		return false
 	}
+	return true
+}
+
+func command(ctx context.Context, name string, args ...string) ([]byte, error) {
+	cmd := exec.CommandContext(ctx, name, args...)
+	cmd.WaitDelay = time.Second
+	return cmd.CombinedOutput()
+}
+
+func dockerOutput(args ...string) ([]byte, error) {
+	return dockerOutputContext(context.Background(), args...)
+}
+
+func dockerOutputContext(parent context.Context, args ...string) ([]byte, error) {
+	ctx, cancel := context.WithTimeout(parent, 10*time.Second)
+	defer cancel()
+	return command(ctx, "docker", args...)
 }
 
 // runUndrain is the boot-time release path (ups-undrain.service).
@@ -399,18 +592,9 @@ func runUndrain() {
 		return
 	}
 	log.Log("UNDRAIN_START", "flag file present; waiting for NUT to report OL")
-	for i := 0; ; i++ {
-		c, err := dial(cfg)
-		if err == nil {
-			st, err := c.Status()
-			c.Close()
-			if err == nil && ups.IsOL(st) {
-				undrainNow(log)
-				return
-			}
-			log.Log("STATUS", "ups.status="+st)
-		} else if i%30 == 0 {
-			log.Log("STATUS", "NUT not reachable: "+err.Error())
+	for {
+		if recoverDrain(cfg, log) {
+			return
 		}
 		time.Sleep(pollInterval)
 	}

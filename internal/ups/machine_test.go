@@ -2,6 +2,19 @@ package ups
 
 import "testing"
 
+func TestPeerDrainsAgainAfterMainsReturns(t *testing.T) {
+	m := NewMachine(Config{Role: RolePeer, ConfirmOB: 1})
+	if d, _ := m.OnProbe(true, "OB", 1); d.Action != ActionDrain {
+		t.Fatal(d)
+	}
+	if d, _ := m.OnProbe(true, "OL", 2); d.Action != ActionUndrain {
+		t.Fatal(d)
+	}
+	if d, _ := m.OnProbe(true, "OB", 3); d.Action != ActionDrain {
+		t.Fatal(d)
+	}
+}
+
 // Peer confirmed on-battery: after ConfirmOB consecutive OB probes the
 // machine issues exactly one drain decision, and repeated OB probes keep
 // returning none.
