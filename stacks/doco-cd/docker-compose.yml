@@ -33,6 +33,9 @@ services:
           interval: 5m
     secrets:
       - doco_cd_sa_token
+      - source: doco_cd_registry_auth
+        target: /root/.docker/config.json
+        mode: 0400
     networks:
       - main
     volumes:
@@ -45,6 +48,8 @@ services:
 
 secrets:
   doco_cd_sa_token:
+    external: true
+  doco_cd_registry_auth:
     external: true
 
 networks:
