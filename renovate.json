@@ -17,6 +17,11 @@
   // Renovate misinterprets this as `8.1.2135`, which appears newer than v3.x.
   // This explicitly blocks that tag to prevent incorrect upgrade PRs.
   "packageRules": [
+    // Caddy 2.11.8 tags have no platform images as of 2026-11-04.
+    {
+      "matchPackageNames": ["mirror.gcr.io/library/caddy"],
+      "allowedVersions": "!/^2\\.11\\.8(-|$)/"
+    },
     {
       "matchPackageNames": ["ghcr.io/linuxserver/lidarr"],
       "allowedVersions": "!/^8\\.1\\.2135$/"

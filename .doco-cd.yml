@@ -5,6 +5,8 @@
 # docs/superpowers/specs/2026-10-24-doco-cd-auto-deploy-design.md).
 name: pairdrop
 working_dir: stacks/pairdrop
+# Concurrent deployments can overlap prune jobs; node timers own image cleanup.
+prune_images: false
 environment:
   PUID: "1000"
   PGID: "1000"
@@ -12,9 +14,11 @@ environment:
 ---
 name: sponsorblock
 working_dir: stacks/sponsorblock
+prune_images: false
 ---
 name: apprise
 working_dir: stacks/apprise
+prune_images: false
 environment:
   PUID: "1000"
   PGID: "1000"
@@ -22,20 +26,24 @@ environment:
 ---
 name: gitea
 working_dir: stacks/gitea
+prune_images: false
 environment:
   PUID: "1000"
   PGID: "1000"
 ---
 name: jellyfin
 working_dir: stacks/jellyfin
+prune_images: false
 ---
 name: mcpjungle
 working_dir: stacks/mcpjungle
+prune_images: false
 environment:
   TZ: Europe/London
 ---
 name: media
 working_dir: stacks/media
+prune_images: false
 environment:
   PUID: "1000"
   PGID: "1000"
@@ -43,20 +51,25 @@ environment:
 ---
 name: netboot
 working_dir: stacks/netboot
+prune_images: false
 ---
 name: immich
 working_dir: stacks/immich
+prune_images: false
 ---
 name: truenas
 working_dir: stacks/truenas
+prune_images: false
 ---
 name: uptime-kuma
 working_dir: stacks/uptime-kuma
+prune_images: false
 environment:
   TZ: Europe/London
 ---
 name: renovate
 working_dir: stacks/renovate
+prune_images: false
 environment:
   PUID: "1000"
   PGID: "1000"
@@ -66,6 +79,7 @@ external_secrets:
 ---
 name: homeassistant
 working_dir: stacks/homeassistant
+prune_images: false
 environment:
   PUID: "1000"
   PGID: "1000"
@@ -81,19 +95,23 @@ external_secrets:
 ---
 name: dns
 working_dir: stacks/dns
+prune_images: false
 ---
 name: overlay-doctor
 working_dir: stacks/overlay-doctor
+prune_images: false
 environment:
   DOCTOR_DRY_RUN: "0"
 ---
 name: traefik
 working_dir: stacks/traefik
+prune_images: false
 external_secrets:
   CF_API_TOKEN: "op://Swarm Doco-CD/home-os deploy/CF_API_TOKEN"
 ---
 name: doco-cd
 working_dir: stacks/doco-cd
+prune_images: false
 external_secrets:
   GIT_ACCESS_TOKEN: "op://Swarm Doco-CD/home-os deploy/GIT_STATUS_TOKEN"
   APPRISE_NOTIFY_URLS: "op://Swarm Doco-CD/home-os deploy/APPRISE_NOTIFY_URLS"
