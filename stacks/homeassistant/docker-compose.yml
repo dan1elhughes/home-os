@@ -62,7 +62,6 @@ services:
       - PUID=${PUID?error}
       - PGID=${PGID?error}
       - TZ=${TZ?error}
-      - DOCKER_MODS=linuxserver/mods:homeassistant-hacs
       - HA_RELOADER_TOKEN=${HA_RELOADER_TOKEN?error}
       # Immich API key for job-queue management (read + pause/resume).
       - IMMICH_API_KEY_QUEUE_MANAGEMENT=${IMMICH_API_KEY_QUEUE_MANAGEMENT?error}
