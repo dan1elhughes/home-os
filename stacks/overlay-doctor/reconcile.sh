@@ -89,6 +89,26 @@ plan_body() {
         }' "$2" "$3" | LC_ALL=C sort
 }
 
+master_plan() {
+    awk -v me="$1" '
+        NR==FNR { truth[$1]=$2; next }
+        $2=="dev" && $3=="vxlan0" && $4=="master" && truth[$1]==me {
+            print "del-master", $1, "-"
+        }' "$2" "$3" | LC_ALL=C sort -u
+}
+
+repair_master() {
+    ssh_node "$1" sh -s -- "$NETWORK" "$2" "$3" <<'REMOTE'
+set -eu
+net=$1
+sandbox=$2
+mac=$3
+endpoints=$(docker network inspect "$net" --format '{{range .Containers}}{{.IPv4Address}} {{.MacAddress}}{{"\n"}}{{end}}')
+printf '%s\n' "$endpoints" | awk -v mac="$mac" '$2==mac{found=1} END{exit !found}'
+sudo nsenter --net=/var/run/docker/netns/"$sandbox" bridge fdb del "$mac" dev vxlan0 master
+REMOTE
+}
+
 conflicts_of() { cut -d' ' -f1 "$1" | uniq -d | wc -l | tr -d ' '; }
 
 unknown_of() {
@@ -100,6 +120,7 @@ if [ "${1:-}" = "--plan" ]; then
     [ $# -eq 4 ] || { echo "usage: $0 --plan <node-ip> <truth-file> <fdb-file>" >&2; exit 2; }
     fdb_pairs < "$4" > /tmp/doctor-fdb.$$
     plan_body "$2" "$3" /tmp/doctor-fdb.$$ > /tmp/doctor-plan.$$
+    master_plan "$2" "$3" "$4" >> /tmp/doctor-plan.$$
     cat /tmp/doctor-plan.$$
     echo "plan endpoints=$(wc -l < "$3" | tr -d ' ') fixes=$(wc -l < /tmp/doctor-plan.$$ | tr -d ' ') conflicts=$(conflicts_of "$3") unknown=$(unknown_of "$3" /tmp/doctor-fdb.$$)"
     rm -f /tmp/doctor-plan.$$ /tmp/doctor-fdb.$$
@@ -157,6 +178,8 @@ cycle() {
         fdb_section "$TMP/gather.$name" | fdb_pairs > "$TMP/fdb.$name"
         unknown=$((unknown + $(unknown_of "$TMP/truth.final" "$TMP/fdb.$name")))
         plan_body "$ip" "$TMP/truth.final" "$TMP/fdb.$name" > "$TMP/plan.$name"
+        fdb_section "$TMP/gather.$name" > "$TMP/fdb-full.$name"
+        master_plan "$ip" "$TMP/truth.final" "$TMP/fdb-full.$name" >> "$TMP/plan.$name"
         [ -s "$TMP/plan.$name" ] || continue
         fixes=$((fixes + $(wc -l < "$TMP/plan.$name")))
         while read -r action mac dst; do
@@ -164,7 +187,14 @@ cycle() {
                 log "dry-run node=$name would $action mac=$mac dst=$dst"
                 continue
             fi
-            if ssh_node "$ip" sudo nsenter --net=/var/run/docker/netns/"$sandbox" \
+            if [ "$action" = "del-master" ]; then
+                if repair_master "$ip" "$sandbox" "$mac"; then
+                    log "fixed node=$name action=$action mac=$mac"
+                else
+                    log "apply failed node=$name action=$action mac=$mac"
+                    return 1
+                fi
+            elif ssh_node "$ip" sudo nsenter --net=/var/run/docker/netns/"$sandbox" \
                     bridge fdb "$action" "$mac" dev vxlan0 dst "$dst" self permanent </dev/null; then
                 log "fixed node=$name action=$action mac=$mac dst=$dst"
             else

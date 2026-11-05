@@ -30,6 +30,15 @@ including DNS on `10.10.10.20:53`.
 3. For each node it repairs rows that disagree: a wrong or missing `dst` gets
    `bridge fdb replace`, and a leftover `dst` for an endpoint that now runs on
    that node gets `bridge fdb del`.
+4. If a confirmed local endpoint has a bridge-master entry on `vxlan0`, it
+   rechecks local ownership and deletes that entry with `bridge fdb del …
+   dev vxlan0 master`. The bridge then learns the local veth from replies.
+   Correct local veth entries and remote master entries are left unchanged.
+
+On 5 November 2026, cl01 had this wrong master entry for its local AdGuard
+container on ingress. Requests to that replica got no replies, while the
+other two replicas answered. Removing only the wrong master entry restored
+30 of 30 test queries. Tunnel destination repairs alone did not fix it.
 
 Guards that reduce the risk of repairs from a partial view:
 
@@ -42,9 +51,8 @@ Guards that reduce the risk of repairs from a partial view:
 - A cycle is skipped below `DOCTOR_MIN_ENDPOINTS` (default 10) endpoints.
   The ingress worker uses 3: one per-node ingress endpoint remains on each
   node even when no services publish ports.
-- Only MACs present in the truth table are touched. Entries for MACs that no
-  live endpoint claims are counted (`unknown=`) and left alone — they are
-  leftovers from long-dead containers and harmless.
+- Only MACs present in the truth table are touched. Tunnel entries for MACs
+  that no live endpoint claims are counted (`unknown=`) and left alone.
 - An endpoint seen on two nodes at once (mid-reschedule) is counted
   (`conflicts=`) and skipped for that cycle.
 

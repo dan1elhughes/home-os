@@ -41,6 +41,12 @@ if command == "docker":
         assert args[4] == '{{range .Containers}}{{.IPv4Address}} {{.MacAddress}}{{"\\n"}}{{end}}', args
         if fixture.get("inspect_error"):
             sys.exit(1)
+        if "endpoints_after_gather" in fixture:
+            marker = Path(os.environ["FIXTURES"] + node)
+            if marker.exists():
+                print(fixture["endpoints_after_gather"])
+                sys.exit(0)
+            marker.touch()
         print(fixture.get("endpoints", ""))
 elif command == "sudo":
     if args == ["ls", "/var/run/docker/netns"]:
@@ -55,6 +61,11 @@ elif command == "sudo":
             print(fixture.get("fdb", ""))
         else:
             assert args[3] == "fdb" and args[4] in ("del", "replace"), args
+            if args[6:] == ["dev", "vxlan0", "master"]:
+                assert args[4] == "del", args
+                with open(os.environ["APPLIED"], "a") as output:
+                    output.write(f"{node} del-master {args[5]}\n")
+                sys.exit(0)
             assert args[6:9] == ["dev", "vxlan0", "dst"], args
             assert args[10:] == ["self", "permanent"], args
             with open(os.environ["APPLIED"], "a") as output:
@@ -74,7 +85,7 @@ class ReconcileTests(unittest.TestCase):
             path.write_text(f"#!{sys.executable}\n" + FAKE)
             path.chmod(0o755)
 
-    def run_cycle(self, nodes, minimum=2):
+    def run_cycle(self, nodes, minimum=2, dry_run=False):
         fixtures = self.work / "fixtures.json"
         fixtures.write_text(json.dumps(dict(zip(("10.0.0.1", "10.0.0.2", "10.0.0.3"), nodes))))
         applied = self.work / "applied"
@@ -87,7 +98,7 @@ class ReconcileTests(unittest.TestCase):
                  "FIXTURES": str(fixtures), "APPLIED": str(applied),
                  "TMPDIR": str(self.work), "DOCTOR_ONCE": "1", "DOCTOR_NETWORK": "main",
                  "DOCTOR_NODES": "cl01,10.0.0.1 cl02,10.0.0.2 cl03,10.0.0.3",
-                 "DOCTOR_MIN_ENDPOINTS": str(minimum), "DOCTOR_DRY_RUN": "0",
+                  "DOCTOR_MIN_ENDPOINTS": str(minimum), "DOCTOR_DRY_RUN": str(int(dry_run)),
                  "DOCTOR_KEY": str(self.work / "absent-key"), "DOCTOR_BEAT_FILE": str(beat)},
         )
         writes = applied.read_text().splitlines() if applied.exists() else []
@@ -138,6 +149,50 @@ class ReconcileTests(unittest.TestCase):
         self.assertIn("skip cycle: 1 endpoints is below the 2 minimum", result.stdout)
         self.assertEqual(writes, [])
         self.assertFalse(beat)
+
+    def test_local_endpoint_wrongly_forwarded_to_vxlan_is_relearned(self):
+        nodes = [self.active(i) for i in range(3)]
+        nodes[0]["fdb"] = (
+            f"{MACS[0]} dev vxlan0 master br0\n"
+            f"{MACS[1]} dev vxlan0 master br0\n"
+            f"{MACS[1]} dev vxlan0 dst 10.0.0.2 self permanent\n"
+            f"{MACS[2]} dev veth99 master br0\n"
+            f"{MACS[2]} dev vxlan0 dst 10.0.0.3 self permanent\n"
+            "02:42:ff:ff:ff:ff dev vxlan0 master br0"
+        )
+        result, writes, beat = self.run_cycle(nodes)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn(f"10.0.0.1 del-master {MACS[0]}", writes)
+        self.assertEqual([row for row in writes if "del-master" in row],
+                         [f"10.0.0.1 del-master {MACS[0]}"])
+        self.assertTrue(beat)
+
+    def test_correct_local_bridge_port_is_left_unchanged(self):
+        nodes = [self.active(i) for i in range(3)]
+        nodes[0]["fdb"] = f"{MACS[0]} dev veth95 master br0"
+        result, writes, beat = self.run_cycle(nodes)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertFalse(any("del-master" in row for row in writes))
+        self.assertTrue(beat)
+
+    def test_master_repair_rechecks_local_endpoint_ownership(self):
+        nodes = [self.active(i) for i in range(3)]
+        nodes[0]["fdb"] = f"{MACS[0]} dev vxlan0 master br0"
+        nodes[0]["endpoints_after_gather"] = ""
+        result, writes, beat = self.run_cycle(nodes)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertFalse(any("del-master" in row for row in writes))
+        self.assertFalse(beat)
+        self.assertIn("apply failed node=cl01 action=del-master", result.stdout)
+
+    def test_master_repair_dry_run_does_not_write(self):
+        nodes = [self.active(i) for i in range(3)]
+        nodes[0]["fdb"] = f"{MACS[0]} dev vxlan0 master br0"
+        result, writes, beat = self.run_cycle(nodes, dry_run=True)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertEqual(writes, [])
+        self.assertTrue(beat)
+        self.assertIn(f"would del-master mac={MACS[0]}", result.stdout)
 
     def test_regular_nodes_repair_missing_wrong_and_local_entries(self):
         nodes = [self.active(i) for i in range(3)]
