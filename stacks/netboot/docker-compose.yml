@@ -1,6 +1,6 @@
 services:
   netboot-proxy:
-    image: mirror.gcr.io/library/caddy:2.11.7-alpine
+    image: mirror.gcr.io/library/caddy:2.11.9-alpine
     command: caddy reverse-proxy --from :80 --to http://10.10.10.60:31010
     deploy:
       labels:
