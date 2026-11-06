@@ -144,7 +144,7 @@ services:
     # header, which Jellyfin 12.0+ rejects (401). The Authorization-header fix
     # is only in the development line for now. Move back to stable once a
     # release carries it.
-    image: ghcr.io/linuxserver/ombi:4.60.18-development
+    image: ghcr.io/linuxserver/ombi:4.60.20-development
     environment:
       - PUID=${PUID?error}
       - PGID=${PGID?error}
