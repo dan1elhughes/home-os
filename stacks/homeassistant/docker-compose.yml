@@ -113,7 +113,7 @@ services:
         - "kuma.homeassistant.http.url=https://home.danhughes.dev/"
 
   predbat:
-    image: nipar44/predbat_addon:slim-v9.7.7
+    image: nipar44/predbat_addon:slim-v9.7.8
     environment:
       - TZ=${TZ?error}
       - WAIT_FOR_HA_HOST=homeassistant
