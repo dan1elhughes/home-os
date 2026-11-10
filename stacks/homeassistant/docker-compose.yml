@@ -57,7 +57,7 @@ services:
         - "kuma.trmnl.http.url=https://trmnl.danhughes.dev/"
 
   homeassistant:
-    image: ghcr.io/linuxserver/homeassistant:2026.11.0
+    image: ghcr.io/linuxserver/homeassistant:2026.11.1
     environment:
       - PUID=${PUID?error}
       - PGID=${PGID?error}
