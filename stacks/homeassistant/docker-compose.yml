@@ -16,7 +16,7 @@ services:
         - "kuma.tasmoadmin.http.url=https://tasmoadmin.danhughes.dev/"
 
   mosquitto:
-    image: eclipse-mosquitto:2.0.22
+    image: eclipse-mosquitto:2.0.23
     ports:
       - 1883:1883
     volumes:
