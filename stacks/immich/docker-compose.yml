@@ -69,7 +69,7 @@ services:
 
   # --- Machine Learning ---
   immich-machine-learning:
-    image: ghcr.io/immich-app/immich-machine-learning:v3.4.1
+    image: ghcr.io/immich-app/immich-machine-learning:v3.4.2
     volumes:
       - ml-cache:/cache
     deploy:
