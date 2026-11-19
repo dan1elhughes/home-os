@@ -4,9 +4,10 @@
 # answer that Hermes writes to the user command_allowlist has no effect after
 # a restart. Until a restart, the running process keeps it in memory.
 
+# model.default stays editable from the dashboard and /model; the provider
+# and URL are pinned so it can only pick OpenCode Go models.
 model:
   provider: opencode-go
-  default: kimi-k3
   # The seeded user config sets an OpenRouter base_url, which wins otherwise.
   base_url: https://opencode.ai/zen/go/v1
 
@@ -68,9 +69,10 @@ tts:
     voice: en-GB-SoniaNeural
 
 agent:
-  # kimi-k3 takes images natively. Go cannot carry images inside tool
-  # results, so the auxiliary describer is pinned to the same model.
-  image_input_mode: native
+  # A main model with vision gets images natively; otherwise kimi-k3, the
+  # auxiliary describer, turns them into text. Go cannot carry images inside
+  # tool results either way.
+  image_input_mode: auto
   disabled_toolsets:
     - terminal
     - file
