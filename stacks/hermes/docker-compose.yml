@@ -1,0 +1,41 @@
+services:
+  hermes:
+    image: nousresearch/hermes-agent:v0.23.2
+    # The image entrypoint (s6 /init) must stay: it drops to the hermes user
+    # (UID 10000) and reaps the processes MCP and tools leave behind.
+    command: gateway run
+    environment:
+      - TZ=${TZ?error}
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN?error}
+      - OPENCODE_GO_API_KEY=${OPENCODE_GO_API_KEY?error}
+      - HERMES_MCPJUNGLE_TOKEN=${HERMES_MCPJUNGLE_TOKEN?error}
+      - TELEGRAM_ALLOWED_USERS=${TELEGRAM_ALLOWED_USERS?error}
+      - TELEGRAM_FAMILY_CHAT=${TELEGRAM_FAMILY_CHAT?error}
+      - TELEGRAM_ADMIN_USER=${TELEGRAM_ADMIN_USER?error}
+    volumes:
+      - "/mnt/nas/hermes-data:/opt/data"
+    configs:
+      - source: hermes_managed_config
+        target: /etc/hermes/config.yaml
+        mode: 0444
+      - source: hermes_soul
+        target: /opt/data/SOUL.md
+        mode: 0444
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          memory: 2G
+
+networks:
+  default:
+    external: true
+    name: main
+
+configs:
+  # doco-cd names each object with a content-hash suffix, so a change here
+  # rolls the service with the new file.
+  hermes_managed_config:
+    file: ./managed/config.yaml
+  hermes_soul:
+    file: ./SOUL.md

@@ -109,6 +109,22 @@ prune_images: false
 external_secrets:
   CF_API_TOKEN: "op://Swarm Doco-CD/home-os deploy/CF_API_TOKEN"
 ---
+name: hermes
+working_dir: stacks/hermes
+prune_images: false
+# Held back until the Telegram IDs below are real.
+pause: true
+environment:
+  TZ: Europe/London
+  # Dan, then his wife.
+  TELEGRAM_ALLOWED_USERS: "0,0"
+  TELEGRAM_FAMILY_CHAT: "0"
+  TELEGRAM_ADMIN_USER: "0"
+external_secrets:
+  TELEGRAM_BOT_TOKEN: "op://Swarm Doco-CD/home-os deploy/TELEGRAM_BOT_TOKEN"
+  OPENCODE_GO_API_KEY: "op://Swarm Doco-CD/home-os deploy/OPENCODE_GO_API_KEY"
+  HERMES_MCPJUNGLE_TOKEN: "op://Swarm Doco-CD/home-os deploy/HERMES_MCPJUNGLE_TOKEN"
+---
 name: doco-cd
 working_dir: stacks/doco-cd
 prune_images: false

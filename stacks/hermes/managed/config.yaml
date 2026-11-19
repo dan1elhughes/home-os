@@ -1,0 +1,99 @@
+# Hermes managed scope, mounted read-only at /etc/hermes/config.yaml.
+# Each leaf here wins over /opt/data/config.yaml, and `hermes config set`
+# refuses to change it. Lists replace the user value whole, so an "Always"
+# answer that Hermes writes to the user command_allowlist has no effect after
+# a restart. Until a restart, the running process keeps it in memory.
+
+model:
+  provider: opencode-go
+  default: kimi-k3
+
+mcp_servers:
+  mcpjungle:
+    url: https://mcp.danhughes.dev/mcp
+    headers:
+      Authorization: "Bearer ${HERMES_MCPJUNGLE_TOKEN}"
+    trust: untrusted
+    tools:
+      exclude: [exa__agent_run]
+      resources: false
+      prompts: false
+
+platform_toolsets:
+  telegram: [memory, cronjob, mcp-mcpjungle]
+
+agent:
+  disabled_toolsets:
+    - terminal
+    - file
+    - code_execution
+    - web
+    - search
+    - browser
+    - skills
+    - delegation
+    - session_search
+    - todo
+    - vision
+    - image_gen
+    - tts
+    - computer_use
+    - connections
+    - kanban
+
+approvals:
+  mode: manual
+  timeout: 300
+  cron_mode: deny
+  single_query_mode: deny
+  unattended_mode: deny
+  approvers: ["*"]
+
+command_allowlist:
+  - mcp:mcpjungle/fastmail__list_calendars
+  - mcp:mcpjungle/fastmail__list_folders
+  - mcp:mcpjungle/fastmail__list_identities
+  - mcp:mcpjungle/fastmail__read_email
+  - mcp:mcpjungle/fastmail__read_note
+  - mcp:mcpjungle/fastmail__read_thread
+  - mcp:mcpjungle/fastmail__search_contacts
+  - mcp:mcpjungle/fastmail__search_email
+  - mcp:mcpjungle/fastmail__search_events
+  - mcp:mcpjungle/fastmail__search_notes
+  - mcp:mcpjungle/fastmail__search_org_contacts
+  - mcp:mcpjungle/fastmail__create_event
+  - mcp:mcpjungle/fastmail__update_event
+  - mcp:mcpjungle/fastmail__draft_email
+  - mcp:mcpjungle/todoist__fetch
+  - mcp:mcpjungle/todoist__fetch-object
+  - mcp:mcpjungle/todoist__find-activity
+  - mcp:mcpjungle/todoist__find-comments
+  - mcp:mcpjungle/todoist__find-completed-tasks
+  - mcp:mcpjungle/todoist__find-filters
+  - mcp:mcpjungle/todoist__find-labels
+  - mcp:mcpjungle/todoist__find-project-collaborators
+  - mcp:mcpjungle/todoist__find-projects
+  - mcp:mcpjungle/todoist__find-reminders
+  - mcp:mcpjungle/todoist__find-sections
+  - mcp:mcpjungle/todoist__find-tasks
+  - mcp:mcpjungle/todoist__find-tasks-by-date
+  - mcp:mcpjungle/todoist__get-overview
+  - mcp:mcpjungle/todoist__list-workspaces
+  - mcp:mcpjungle/todoist__search
+  - mcp:mcpjungle/todoist__user-info
+  - mcp:mcpjungle/todoist__view-attachment
+  - mcp:mcpjungle/todoist__add-tasks
+  - mcp:mcpjungle/todoist__complete-tasks
+  - mcp:mcpjungle/todoist__uncomplete-tasks
+  - mcp:mcpjungle/todoist__update-tasks
+  - mcp:mcpjungle/exa__web_search_exa
+  - mcp:mcpjungle/exa__web_fetch_exa
+
+telegram:
+  require_mention: true
+  allowed_chats: "${TELEGRAM_FAMILY_CHAT}"
+  allow_admin_from: ["${TELEGRAM_ADMIN_USER}"]
+  group_allow_admin_from: ["${TELEGRAM_ADMIN_USER}"]
+  # Gating makes /approve admin-only; this lets Dan's wife answer approvals.
+  user_allowed_commands: [approve, deny]
+  group_user_allowed_commands: [approve, deny]

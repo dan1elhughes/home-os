@@ -1,0 +1,77 @@
+# hermes
+
+[Hermes Agent](https://hermes-agent.nousresearch.com/docs/) as a family
+assistant in a Telegram group of Dan, his wife and the bot. Design:
+`docs/superpowers/specs/2026-11-19-hermes-agent-design.md`.
+
+The bot polls Telegram outbound, so it has no Traefik route and no
+dashboard. Its tools all come from mcpjungle through the client `hermes`,
+whose allow-list is `fastmail`, `todoist` and `exa`. Its model is OpenCode
+Go (`kimi-k3`).
+
+## Files
+
+| Repository | Container | Purpose |
+| --- | --- | --- |
+| `managed/config.yaml` | `/etc/hermes/config.yaml` | Managed scope: model, MCP, toolsets, approvals, Telegram gates |
+| `SOUL.md` | `/opt/data/SOUL.md` | Identity and house rules |
+| `/mnt/nas/hermes-data` | `/opt/data` | Sessions, memory, cron jobs, the user `config.yaml` |
+
+Both repository files are swarm configs, so a change rolls the service.
+Each leaf in the managed file wins over `/opt/data/config.yaml`, and
+`hermes config set` refuses to change it. That keeps these settings out of
+the bot's and the chat's reach:
+
+- Only the `memory`, `cronjob` and `mcp-mcpjungle` toolsets. There is no
+  terminal, file, code or browser tool, so an email that tries to give the
+  bot instructions has nothing local to use.
+- `trust: untrusted` on mcpjungle, so every tool call asks for approval,
+  except the tools in `command_allowlist`: reads, shopping-list changes,
+  calendar event changes and email drafts.
+- Sending email, deleting anything and RSVPs always ask. An "Always" answer
+  is held in memory until the next restart, because the managed list
+  replaces the list that Hermes writes to `/opt/data/config.yaml`. To clear
+  it at once, run `docker service update --force hermes_hermes`.
+- The bot only answers in the family group (`allowed_chats`) and in direct
+  messages from the two users (`TELEGRAM_ALLOWED_USERS`), and in the group
+  only when someone mentions it or replies to it.
+- Dan is the only admin (`/yolo`, `/model`, and so on). Both can approve.
+
+## Secrets and IDs
+
+| Name | Where |
+| --- | --- |
+| `TELEGRAM_BOT_TOKEN` | 1Password `Swarm Doco-CD` / `home-os deploy` |
+| `OPENCODE_GO_API_KEY` | 1Password `Swarm Doco-CD` / `home-os deploy` |
+| `HERMES_MCPJUNGLE_TOKEN` | 1Password `Swarm Doco-CD` / `home-os deploy` (the mcpjungle client token) |
+| `TELEGRAM_ALLOWED_USERS`, `TELEGRAM_FAMILY_CHAT`, `TELEGRAM_ADMIN_USER` | `.doco-cd.yml`, not secret |
+
+To read the Telegram IDs, send a message in the group, then:
+
+```bash
+curl -s "https://api.telegram.org/bot$(op read 'op://Swarm Doco-CD/home-os deploy/TELEGRAM_BOT_TOKEN')/getUpdates" \
+  | jq '.result[].message | {chat: .chat.id, from: .from.id, name: .from.first_name}'
+```
+
+The gateway consumes updates once it runs, so do this before the first
+deploy, or read the IDs from `docker service logs hermes_hermes`.
+
+To rotate a token, change the 1Password field and redeploy
+(`cd stacks && ./deploy-local.sh hermes`, or commit any change to this
+stack). For the mcpjungle token, re-create the `hermes` client with the new
+token as `stacks/mcpjungle/README.md` describes.
+
+## Add a capability
+
+1. Register the MCP server in mcpjungle (`stacks/mcpjungle/README.md`).
+2. Add it to the `hermes` client's allow-list (delete and re-create with
+   the same token, as that README describes).
+3. Add its read-only tools to `command_allowlist` in `managed/config.yaml`
+   as `mcp:mcpjungle/<server>__<tool>`. Anything not listed asks first.
+4. Commit. The service rolls with the new config.
+
+## Model
+
+Change `model.default` in `managed/config.yaml`. OpenCode Go has rolling
+usage windows; when one is used up, the bot stops answering until it
+resets. `docker exec <ctr> hermes usage` shows the state.
