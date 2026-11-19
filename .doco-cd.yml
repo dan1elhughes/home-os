@@ -116,8 +116,8 @@ environment:
   PUID: "1000"
   PGID: "1000"
   TZ: Europe/London
-  # Dan's wife is added once she has messaged the bot.
-  TELEGRAM_ALLOWED_USERS: "9064272390"
+  # Dan, then his wife.
+  TELEGRAM_ALLOWED_USERS: "9064272390,9223541361"
   TELEGRAM_FAMILY_CHAT: "-5325581266"
   TELEGRAM_ADMIN_USER: "9064272390"
 external_secrets:
