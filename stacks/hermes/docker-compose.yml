@@ -28,9 +28,6 @@ services:
       - source: hermes_managed_config
         target: /etc/hermes/config.yaml
         mode: 0444
-      - source: hermes_soul
-        target: /opt/data/SOUL.md
-        mode: 0444
     deploy:
       replicas: 1
       resources:
@@ -57,5 +54,3 @@ configs:
   # rolls the service with the new file.
   hermes_managed_config:
     file: ./managed/config.yaml
-  hermes_soul:
-    file: ./SOUL.md

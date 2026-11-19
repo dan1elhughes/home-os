@@ -15,13 +15,14 @@ Go (`kimi-k3`).
 
 ## Files
 
-| Repository | Container | Purpose |
+| Source | Container | Purpose |
 | --- | --- | --- |
-| `managed/config.yaml` | `/etc/hermes/config.yaml` | Managed scope: model, MCP, toolsets, approvals, Telegram gates |
-| `SOUL.md` | `/opt/data/SOUL.md` | Identity and house rules |
-| `/mnt/nas/hermes-data` | `/opt/data` | Sessions, memory, cron jobs, the user `config.yaml` |
+| `managed/config.yaml` (repository) | `/etc/hermes/config.yaml` | Managed scope: model, MCP, toolsets, approvals, Telegram gates |
+| `/mnt/nas/hermes-data` | `/opt/data` | Everything Hermes owns and edits itself: `SOUL.md`, `memories/`, skills, cron jobs, sessions, the user `config.yaml` |
 
-Both repository files are swarm configs, so a change rolls the service.
+The managed file is a swarm config, so a change rolls the service. Hermes
+manages `SOUL.md` and its memories itself; edit them from the dashboard or
+in the chat, not in this repository. Back them up with the NAS share.
 Each leaf in the managed file wins over `/opt/data/config.yaml`, and
 `hermes config set` refuses to change it. That keeps these settings out of
 the bot's and the chat's reach:
