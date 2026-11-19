@@ -16,6 +16,12 @@ services:
       - TELEGRAM_ALLOWED_USERS=${TELEGRAM_ALLOWED_USERS?error}
       - TELEGRAM_FAMILY_CHAT=${TELEGRAM_FAMILY_CHAT?error}
       - TELEGRAM_ADMIN_USER=${TELEGRAM_ADMIN_USER?error}
+      # The dashboard refuses a non-loopback bind without a sign-in provider.
+      - HERMES_DASHBOARD=1
+      - HERMES_DASHBOARD_PUBLIC_URL=https://hermes.danhughes.dev
+      - HERMES_DASHBOARD_BASIC_AUTH_USERNAME=dan
+      - HERMES_DASHBOARD_BASIC_AUTH_PASSWORD=${HERMES_DASHBOARD_BASIC_AUTH_PASSWORD?error}
+      - HERMES_DASHBOARD_BASIC_AUTH_SECRET=${HERMES_DASHBOARD_BASIC_AUTH_SECRET?error}
     volumes:
       - "/mnt/nas/hermes-data:/opt/data"
     configs:
@@ -30,6 +36,16 @@ services:
       resources:
         limits:
           memory: 2G
+      labels:
+        - "traefik.enable=true"
+        - "traefik.http.routers.hermes.rule=Host(`hermes.danhughes.dev`)"
+        - "traefik.http.routers.hermes.entrypoints=websecure"
+        - "traefik.http.routers.hermes.tls=true"
+        - "traefik.http.routers.hermes.tls.certResolver=letsencrypt"
+        - "traefik.http.services.hermes.loadbalancer.server.port=9119"
+        - "traefik.swarm.network=main"
+        - "kuma.hermes.http.name=Hermes"
+        - "kuma.hermes.http.url=https://hermes.danhughes.dev/"
 
 networks:
   default:
