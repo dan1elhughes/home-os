@@ -51,9 +51,26 @@ tools:
     enabled: "off"
 
 platform_toolsets:
-  telegram: [memory, cronjob, mcp-mcpjungle]
+  telegram: [memory, cronjob, vision, tts, mcp-mcpjungle]
+
+# Voice notes are transcribed locally; the transcript is not posted back.
+stt:
+  enabled: true
+  provider: local
+  language: en
+  echo_transcripts: false
+  local:
+    model: small
+
+tts:
+  provider: edge
+  edge:
+    voice: en-GB-SoniaNeural
 
 agent:
+  # kimi-k3 takes images natively. Go cannot carry images inside tool
+  # results, so the auxiliary describer is pinned to the same model.
+  image_input_mode: native
   disabled_toolsets:
     - terminal
     - file
@@ -65,12 +82,15 @@ agent:
     - delegation
     - session_search
     - todo
-    - vision
     - image_gen
-    - tts
     - computer_use
     - connections
     - kanban
+
+auxiliary:
+  vision:
+    provider: opencode-go
+    model: kimi-k3
 
 approvals:
   mode: manual
@@ -117,10 +137,16 @@ command_allowlist:
   - mcp:mcpjungle/exa__web_search_exa
 
 telegram:
-  require_mention: true
+  # The bot sees every group message and decides itself whether to answer;
+  # a reply of only [SILENT] sends nothing.
+  require_mention: false
+  allow_silence: true
+  # 👀 while working, then 👍 or 👎. The typing bubble is on by default.
+  reactions: true
   allowed_chats: "${TELEGRAM_FAMILY_CHAT}"
   allow_admin_from: ["${TELEGRAM_ADMIN_USER}"]
   group_allow_admin_from: ["${TELEGRAM_ADMIN_USER}"]
-  # Gating makes /approve admin-only; this lets Dan's wife answer approvals.
-  user_allowed_commands: [approve, deny]
-  group_user_allowed_commands: [approve, deny]
+  # Gating makes /approve admin-only; this lets Dan's wife answer approvals
+# and switch voice replies.
+  user_allowed_commands: [approve, deny, voice]
+  group_user_allowed_commands: [approve, deny, voice]

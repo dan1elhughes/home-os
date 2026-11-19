@@ -74,6 +74,20 @@ token as `stacks/mcpjungle/README.md` describes.
    as `mcp:mcpjungle/<server>__<tool>`. Anything not listed asks first.
 4. Commit. The service rolls with the new config.
 
+## Voice, photos and reactions
+
+- Voice notes are transcribed in the container by faster-whisper (`small`,
+  English); the transcript is not echoed to the chat. OpenCode has no
+  transcription endpoint, and its relay rejects audio input. The package
+  lives in `/opt/data/installs` and survives restarts; on a fresh data
+  directory, install it once with
+  `docker exec <ctr> /opt/hermes/.venv/bin/python -c 'import pm; pm.sync_venv(["stt-whisper"], explicit=True)'`.
+- Spoken replies use Edge TTS (`en-GB-SoniaNeural`, no key). They are off
+  until someone sends `/voice on` (reply in voice to voice notes) or
+  `/voice tts` (always) in a chat.
+- Photos go to `kimi-k3` natively; the auxiliary describer is the same model.
+- The bot reacts 👀 while it works, then 👍 or 👎.
+
 ## Model
 
 Change `model.default` in `managed/config.yaml`. OpenCode Go has rolling
