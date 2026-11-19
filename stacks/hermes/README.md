@@ -26,8 +26,10 @@ the bot's and the chat's reach:
   terminal, file, code or browser tool, so an email that tries to give the
   bot instructions has nothing local to use.
 - `trust: untrusted` on mcpjungle, so every tool call asks for approval,
-  except the tools in `command_allowlist`: reads, shopping-list changes,
-  calendar event changes and email drafts.
+  except the tools in `command_allowlist`: reads, Exa search, Todoist task
+  changes and email drafts. Calendar event writes ask, because an event with
+  attendees sends invitation email. Exa fetch asks, because a URL can carry
+  mail contents out.
 - Sending email, deleting anything and RSVPs always ask. An "Always" answer
   is held in memory until the next restart, because the managed list
   replaces the list that Hermes writes to `/opt/data/config.yaml`. To clear
@@ -46,15 +48,17 @@ the bot's and the chat's reach:
 | `HERMES_MCPJUNGLE_TOKEN` | 1Password `Swarm Doco-CD` / `home-os deploy` (the mcpjungle client token) |
 | `TELEGRAM_ALLOWED_USERS`, `TELEGRAM_FAMILY_CHAT`, `TELEGRAM_ADMIN_USER` | `.doco-cd.yml`, not secret |
 
-To read the Telegram IDs, send a message in the group, then:
+The gateway logs only hashed IDs and consumes every update, so to read a new
+Telegram ID, stop it, have the person message the bot, and read the queue.
+The `-K` config keeps the token off the command line:
 
 ```bash
-curl -s "https://api.telegram.org/bot$(op read 'op://Swarm Doco-CD/home-os deploy/TELEGRAM_BOT_TOKEN')/getUpdates" \
+docker --context swarm service scale hermes_hermes=0
+curl -s -K <(printf 'url = "https://api.telegram.org/bot%s/getUpdates"\n' \
+    "$(op read 'op://Swarm Doco-CD/home-os deploy/TELEGRAM_BOT_TOKEN')") \
   | jq '.result[].message | {chat: .chat.id, from: .from.id, name: .from.first_name}'
+docker --context swarm service scale hermes_hermes=1
 ```
-
-The gateway consumes updates once it runs, so do this before the first
-deploy, or read the IDs from `docker service logs hermes_hermes`.
 
 To rotate a token, change the 1Password field and redeploy
 (`cd stacks && ./deploy-local.sh hermes`, or commit any change to this

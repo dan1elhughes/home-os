@@ -80,6 +80,9 @@ approvals:
   unattended_mode: deny
   approvers: ["*"]
 
+# Calendar event writes and Exa fetch are left out on purpose: an event with
+# attendees sends invitation email, and a fetch can carry mail contents to
+# any URL. Both ask first.
 command_allowlist:
   - mcp:mcpjungle/fastmail__list_calendars
   - mcp:mcpjungle/fastmail__list_folders
@@ -91,8 +94,6 @@ command_allowlist:
   - mcp:mcpjungle/fastmail__search_email
   - mcp:mcpjungle/fastmail__search_events
   - mcp:mcpjungle/fastmail__search_notes
-  - mcp:mcpjungle/fastmail__create_event
-  - mcp:mcpjungle/fastmail__update_event
   - mcp:mcpjungle/fastmail__draft_email
   - mcp:mcpjungle/todoist__fetch
   - mcp:mcpjungle/todoist__fetch-object
@@ -114,7 +115,6 @@ command_allowlist:
   - mcp:mcpjungle/todoist__uncomplete-tasks
   - mcp:mcpjungle/todoist__update-tasks
   - mcp:mcpjungle/exa__web_search_exa
-  - mcp:mcpjungle/exa__web_fetch_exa
 
 telegram:
   require_mention: true

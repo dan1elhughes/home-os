@@ -93,7 +93,8 @@ resets. That is accepted. No fallback provider on day one.
 **Deploy.**
 - One service on the external `main` overlay network, one replica.
 - State: `/mnt/nas/hermes-data:/opt/data` (create the directory on one node
-  only, owned by UID 10000, which the image's `hermes` user uses).
+  only; the NAS maps every file to UID 1000, so the stack remaps the
+  image's `hermes` user to 1000 with `PUID`/`PGID`).
 - Keep the image's entrypoint; command `gateway run`. `HERMES_DASHBOARD`
   unset.
 - `TZ=Europe/London`.
