@@ -115,6 +115,8 @@ prune_images: false
 # Held back until the Telegram IDs below are real.
 pause: true
 environment:
+  PUID: "1000"
+  PGID: "1000"
   TZ: Europe/London
   # Dan, then his wife.
   TELEGRAM_ALLOWED_USERS: "0,0"

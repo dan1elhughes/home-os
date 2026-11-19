@@ -2,9 +2,13 @@ services:
   hermes:
     image: nousresearch/hermes-agent:v0.23.2
     # The image entrypoint (s6 /init) must stay: it drops to the hermes user
-    # (UID 10000) and reaps the processes MCP and tools leave behind.
+    # and reaps the processes MCP and tools leave behind.
     command: gateway run
     environment:
+      # The NAS export maps every file to 1000, so the hermes user (10000 by
+      # default) is remapped to match.
+      - PUID=${PUID?error}
+      - PGID=${PGID?error}
       - TZ=${TZ?error}
       - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN?error}
       - OPENCODE_GO_API_KEY=${OPENCODE_GO_API_KEY?error}
