@@ -112,16 +112,14 @@ external_secrets:
 name: hermes
 working_dir: stacks/hermes
 prune_images: false
-# Held back until the Telegram IDs below are real.
-pause: true
 environment:
   PUID: "1000"
   PGID: "1000"
   TZ: Europe/London
-  # Dan, then his wife.
-  TELEGRAM_ALLOWED_USERS: "0,0"
-  TELEGRAM_FAMILY_CHAT: "0"
-  TELEGRAM_ADMIN_USER: "0"
+  # Dan's wife is added once she has messaged the bot.
+  TELEGRAM_ALLOWED_USERS: "9064272390"
+  TELEGRAM_FAMILY_CHAT: "-5325581266"
+  TELEGRAM_ADMIN_USER: "9064272390"
 external_secrets:
   TELEGRAM_BOT_TOKEN: "op://Swarm Doco-CD/home-os deploy/TELEGRAM_BOT_TOKEN"
   OPENCODE_GO_API_KEY: "op://Swarm Doco-CD/home-os deploy/OPENCODE_GO_API_KEY"

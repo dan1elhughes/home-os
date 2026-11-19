@@ -7,6 +7,12 @@
 model:
   provider: opencode-go
   default: kimi-k3
+  # The seeded user config sets an OpenRouter base_url, which wins otherwise.
+  base_url: https://opencode.ai/zen/go/v1
+
+# /opt/data is NFS. WAL locking over NFS can corrupt the SQLite stores.
+database:
+  journal_mode: delete
 
 mcp_servers:
   mcpjungle:
@@ -15,9 +21,34 @@ mcp_servers:
       Authorization: "Bearer ${HERMES_MCPJUNGLE_TOKEN}"
     trust: untrusted
     tools:
-      exclude: [exa__agent_run]
+      exclude:
+        - exa__agent_run
+        - fastmail__search_org_contacts
+        - fastmail__set_memo
+        - fastmail__upload_attachment
+        - todoist__add-filters
+        - todoist__analyze-project-health
+        - todoist__export-project-template
+        - todoist__find-activity
+        - todoist__find-filters
+        - todoist__get-productivity-stats
+        - todoist__get-project-activity-stats
+        - todoist__get-project-health
+        - todoist__get-workspace-insights
+        - todoist__import-project-template
+        - todoist__list-workspaces
+        - todoist__manage-assignments
+        - todoist__project-move
+        - todoist__reorder-objects
+        - todoist__update-filters
       resources: false
       prompts: false
+
+# The tool_search bridge hides MCP schemas behind a generic tool_call, and
+# kimi-k3 drops required arguments through it. Keep every tool eager.
+tools:
+  tool_search:
+    enabled: "off"
 
 platform_toolsets:
   telegram: [memory, cronjob, mcp-mcpjungle]
@@ -60,16 +91,13 @@ command_allowlist:
   - mcp:mcpjungle/fastmail__search_email
   - mcp:mcpjungle/fastmail__search_events
   - mcp:mcpjungle/fastmail__search_notes
-  - mcp:mcpjungle/fastmail__search_org_contacts
   - mcp:mcpjungle/fastmail__create_event
   - mcp:mcpjungle/fastmail__update_event
   - mcp:mcpjungle/fastmail__draft_email
   - mcp:mcpjungle/todoist__fetch
   - mcp:mcpjungle/todoist__fetch-object
-  - mcp:mcpjungle/todoist__find-activity
   - mcp:mcpjungle/todoist__find-comments
   - mcp:mcpjungle/todoist__find-completed-tasks
-  - mcp:mcpjungle/todoist__find-filters
   - mcp:mcpjungle/todoist__find-labels
   - mcp:mcpjungle/todoist__find-project-collaborators
   - mcp:mcpjungle/todoist__find-projects
@@ -78,7 +106,6 @@ command_allowlist:
   - mcp:mcpjungle/todoist__find-tasks
   - mcp:mcpjungle/todoist__find-tasks-by-date
   - mcp:mcpjungle/todoist__get-overview
-  - mcp:mcpjungle/todoist__list-workspaces
   - mcp:mcpjungle/todoist__search
   - mcp:mcpjungle/todoist__user-info
   - mcp:mcpjungle/todoist__view-attachment
