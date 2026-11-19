@@ -79,9 +79,11 @@ token as `stacks/mcpjungle/README.md` describes.
 - Voice notes are transcribed in the container by faster-whisper (`small`,
   English); the transcript is not echoed to the chat. OpenCode has no
   transcription endpoint, and its relay rejects audio input. The package
-  lives in `/opt/data/installs` and survives restarts; on a fresh data
-  directory, install it once with
-  `docker exec <ctr> /opt/hermes/.venv/bin/python -c 'import pm; pm.sync_venv(["stt-whisper"], explicit=True)'`.
+  lives in `/opt/data/installs` and the model in `/opt/data/.cache`, so both
+  survive restarts. On a fresh data directory, enable the extra once, then
+  restart the service (the install takes several minutes on NFS):
+  `docker exec -u hermes -w /opt/hermes -e HERMES_HOME=/opt/data -e PYTHONPATH=/opt/hermes <ctr> /opt/hermes/.venv/bin/python -c 'import pm; pm.ensure_import("stt-whisper")'`.
+  It ends with "restart Hermes to activate it", which is expected.
 - Spoken replies use Edge TTS (`en-GB-SoniaNeural`, no key). They are off
   until someone sends `/voice on` (reply in voice to voice notes) or
   `/voice tts` (always) in a chat.
