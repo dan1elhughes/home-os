@@ -5,8 +5,10 @@ assistant in a Telegram group of Dan, his wife and the bot. Design:
 `docs/superpowers/specs/2026-11-19-hermes-agent-design.md`.
 
 The bot polls Telegram outbound. The web dashboard is at
-`https://hermes.danhughes.dev` (user `dan`, password in 1Password as
-`HERMES_DASHBOARD_BASIC_AUTH_PASSWORD`). Hermes refuses to serve it on a
+`https://hermes.danhughes.dev`. Sign in with the "danhughes.dev" login from
+the Private vault; its username and password are copied into `home-os
+deploy` as `HERMES_DASHBOARD_BASIC_AUTH_USERNAME` and `_PASSWORD`, so change
+both items together and redeploy. Hermes refuses to serve it on a
 non-loopback bind without a sign-in provider, so it keeps its own password
 even on the internal domain. Settings in the managed config cannot be
 changed from the dashboard. Its tools all come from mcpjungle through the client `hermes`,
@@ -51,7 +53,7 @@ the bot's and the chat's reach:
 | `TELEGRAM_BOT_TOKEN` | 1Password `Swarm Doco-CD` / `home-os deploy` |
 | `OPENCODE_GO_API_KEY` | 1Password `Swarm Doco-CD` / `home-os deploy` |
 | `HERMES_MCPJUNGLE_TOKEN` | 1Password `Swarm Doco-CD` / `home-os deploy` (the mcpjungle client token) |
-| `HERMES_DASHBOARD_BASIC_AUTH_PASSWORD`, `HERMES_DASHBOARD_BASIC_AUTH_SECRET` | 1Password `Swarm Doco-CD` / `home-os deploy` |
+| `HERMES_DASHBOARD_BASIC_AUTH_USERNAME`, `_PASSWORD`, `_SECRET` | 1Password `Swarm Doco-CD` / `home-os deploy` |
 | `TELEGRAM_ALLOWED_USERS`, `TELEGRAM_FAMILY_CHAT`, `TELEGRAM_ADMIN_USER` | `.doco-cd.yml`, not secret |
 
 The gateway logs only hashed IDs and consumes every update, so to read a new
