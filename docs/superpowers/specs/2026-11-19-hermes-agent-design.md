@@ -16,7 +16,8 @@ servers, not from changing the agent.
 - Chat happens in a Telegram group of Dan, his wife and the bot. Both people
   can also message the bot directly.
 - All tools come from mcpjungle (`https://mcp.danhughes.dev/mcp`). Day one:
-  `fastmail` (mail, calendar, contacts, notes) and `todoist`.
+  `fastmail` (mail, calendar, contacts, notes), `todoist` and `exa` (web
+  search and page fetch; registered in mcpjungle on 2026-11-19).
 - The shopping list is a "Shopping" project in Dan's Todoist, shared with
   his wife, so both can also edit it in the Todoist app.
 - The model is OpenCode Go (Dan's subscription).
@@ -50,15 +51,17 @@ direct-message allow-list). Privacy mode in BotFather stays on unless
 mention-only replies need it off.
 
 **Tools through mcpjungle.** Create a new mcpjungle client named `hermes`
-with its own token and the allow-list `["fastmail", "todoist"]`; `tally` is
-out. Follow `stacks/mcpjungle/README.md` for creating the client. Hermes
+with its own token and the allow-list `["fastmail", "todoist", "exa"]`; `tally` and `filesystem` are
+out. Exa (registered 2026-11-19, `x-api-key` header) gives web search and
+page fetch; its `agent_run` tool is excluded because long research runs cost
+more and do not suit a chat. Follow `stacks/mcpjungle/README.md` for creating the client. Hermes
 connects to `https://mcp.danhughes.dev/mcp` with
 `Authorization: Bearer <hermes client token>`. To add a capability later,
 register a server in mcpjungle and add it to this client's allow-list
 (delete and re-create with the same token, as the README describes).
 
 **Permissions.** Reads are free: search and read mail, list and search
-events, read notes and contacts, all of Todoist reads. Adding and completing
+events, read notes and contacts, all of Todoist reads, Exa search and fetch. Adding and completing
 shopping-list items and creating or updating calendar events are free.
 These need an explicit yes in the chat before the call:
 `fastmail__send_email`, `fastmail__delete_email`, `fastmail__delete_event`,
