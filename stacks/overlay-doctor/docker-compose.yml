@@ -2,7 +2,7 @@
 # fixed in 29.9.0). See README.md — this stack is meant to be deleted then.
 services:
   overlay-doctor: &doctor
-    image: nicolaka/netshoot:v0.16
+    image: nicolaka/netshoot:v0.17
     entrypoint: ["/bin/sh", "-c", "exec /bin/sh /doctor/reconcile.sh"]
     environment: &doctor-environment
       DOCTOR_NETWORK: main
