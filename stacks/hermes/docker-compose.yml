@@ -1,6 +1,6 @@
 services:
   hermes:
-    image: nousresearch/hermes-agent:v0.23.3
+    image: nousresearch/hermes-agent:v0.23.4
     # The image entrypoint (s6 /init) must stay: it drops to the hermes user
     # and reaps the processes MCP and tools leave behind.
     command: gateway run
