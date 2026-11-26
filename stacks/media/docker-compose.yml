@@ -97,6 +97,7 @@ services:
       - PUID=${PUID?error}
       - PGID=${PGID?error}
       - TZ=${TZ?error}
+      - LIDARR__AUTH__METHOD=External
     volumes:
       - "/mnt/nas/lidarr-config:/config"
       - "downloads_complete:/downloads/complete"
