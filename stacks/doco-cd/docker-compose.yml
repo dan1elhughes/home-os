@@ -40,7 +40,7 @@ services:
       - main
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-      - doco_data:/data
+      - /mnt/nas/doco-cd/data:/data
     deploy:
       placement:
         constraints:
@@ -55,6 +55,3 @@ secrets:
 networks:
   main:
     external: true
-
-volumes:
-  doco_data:
