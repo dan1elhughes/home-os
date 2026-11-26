@@ -1,6 +1,6 @@
 services:
   tasmoadmin:
-    image: ghcr.io/tasmoadmin/tasmoadmin:v5.0.0
+    image: ghcr.io/tasmoadmin/tasmoadmin:v5.1.0
     volumes:
       - "/mnt/nas/tasmoadmin-config:/data"
     deploy:
