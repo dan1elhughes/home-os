@@ -25,6 +25,7 @@ services:
       - PUID=${PUID?error}
       - PGID=${PGID?error}
       - TZ=${TZ?error}
+      - PROWLARR__AUTH__METHOD=External
     volumes:
       - "/mnt/nas/prowlarr-config:/config"
     healthcheck:
