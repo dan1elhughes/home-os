@@ -1,7 +1,7 @@
 ---
 services:
   pairdrop:
-    image: ghcr.io/linuxserver/pairdrop:1.11.2
+    image: ghcr.io/linuxserver/pairdrop:1.11.3
     environment:
       - PUID=${PUID?error}
       - PGID=${PGID?error}
